@@ -12,36 +12,36 @@ import (
 
 	"context"
 
-	"github.com/google/go-github/github"
+	"github.com/xanzy/go-gitlab"
 )
 
 //go:generate counterfeiter . GitHub
 
-type GitHub interface {
-	ListReleases() ([]*github.RepositoryRelease, error)
-	GetReleaseByTag(tag string) (*github.RepositoryRelease, error)
-	GetRelease(id int) (*github.RepositoryRelease, error)
-	CreateRelease(release github.RepositoryRelease) (*github.RepositoryRelease, error)
-	UpdateRelease(release github.RepositoryRelease) (*github.RepositoryRelease, error)
+type gitlab interface {
+	ListReleases() ([]*gitlab.RepositoryRelease, error)
+	GetReleaseByTag(tag string) (*gitlab.RepositoryRelease, error)
+	GetRelease(id int) (*gitlab.RepositoryRelease, error)
+	CreateRelease(release gitlab.RepositoryRelease) (*gitlab.RepositoryRelease, error)
+	UpdateRelease(release gitlab.RepositoryRelease) (*gitlab.RepositoryRelease, error)
 
-	ListReleaseAssets(release github.RepositoryRelease) ([]*github.ReleaseAsset, error)
-	UploadReleaseAsset(release github.RepositoryRelease, name string, file *os.File) error
-	DeleteReleaseAsset(asset github.ReleaseAsset) error
-	DownloadReleaseAsset(asset github.ReleaseAsset) (io.ReadCloser, error)
+	ListReleaseAssets(release gitlab.RepositoryRelease) ([]*gitlab.ReleaseAsset, error)
+	UploadReleaseAsset(release gitlab.RepositoryRelease, name string, file *os.File) error
+	DeleteReleaseAsset(asset gitlab.ReleaseAsset) error
+	DownloadReleaseAsset(asset gitlab.ReleaseAsset) (io.ReadCloser, error)
 
 	GetTarballLink(tag string) (*url.URL, error)
 	GetZipballLink(tag string) (*url.URL, error)
-	GetRef(tag string) (*github.Reference, error)
+	GetRef(tag string) (*gitlab.Reference, error)
 }
 
-type GitHubClient struct {
-	client *github.Client
+type gitlabClient struct {
+	client *gitlab.Client
 
 	owner      string
 	repository string
 }
 
-func NewGitHubClient(source Source) (*GitHubClient, error) {
+func NewGitlabClient(source Source) (*gitlabClient, error) {
 	var httpClient = &http.Client{}
 	var ctx = context.TODO()
 
@@ -60,24 +60,24 @@ func NewGitHubClient(source Source) (*GitHubClient, error) {
 		}
 	}
 
-	client := github.NewClient(httpClient)
+	client := gitlab.NewClient(httpClient)
 
-	if source.GitHubAPIURL != "" {
+	if source.gitlabAPIURL != "" {
 		var err error
-		client.BaseURL, err = url.Parse(source.GitHubAPIURL)
+		client.BaseURL, err = url.Parse(source.gitlabAPIURL)
 		if err != nil {
 			return nil, err
 		}
 
-		client.UploadURL, err = url.Parse(source.GitHubAPIURL)
+		client.UploadURL, err = url.Parse(source.gitlabAPIURL)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if source.GitHubUploadsURL != "" {
+	if source.gitlabUploadsURL != "" {
 		var err error
-		client.UploadURL, err = url.Parse(source.GitHubUploadsURL)
+		client.UploadURL, err = url.Parse(source.gitlabUploadsURL)
 		if err != nil {
 			return nil, err
 		}
@@ -88,17 +88,17 @@ func NewGitHubClient(source Source) (*GitHubClient, error) {
 		owner = source.User
 	}
 
-	return &GitHubClient{
+	return &gitlabClient{
 		client:     client,
 		owner:      owner,
 		repository: source.Repository,
 	}, nil
 }
 
-func (g *GitHubClient) ListReleases() ([]*github.RepositoryRelease, error) {
+func (g *gitlabClient) ListReleases() ([]*gitlab.RepositoryRelease, error) {
 	releases, res, err := g.client.Repositories.ListReleases(context.TODO(), g.owner, g.repository, nil)
 	if err != nil {
-		return []*github.RepositoryRelease{}, err
+		return []*gitlab.RepositoryRelease{}, err
 	}
 
 	err = res.Body.Close()
@@ -109,10 +109,10 @@ func (g *GitHubClient) ListReleases() ([]*github.RepositoryRelease, error) {
 	return releases, nil
 }
 
-func (g *GitHubClient) GetReleaseByTag(tag string) (*github.RepositoryRelease, error) {
+func (g *gitlabClient) GetReleaseByTag(tag string) (*gitlab.RepositoryRelease, error) {
 	release, res, err := g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repository, tag)
 	if err != nil {
-		return &github.RepositoryRelease{}, err
+		return &gitlab.RepositoryRelease{}, err
 	}
 
 	err = res.Body.Close()
@@ -123,10 +123,10 @@ func (g *GitHubClient) GetReleaseByTag(tag string) (*github.RepositoryRelease, e
 	return release, nil
 }
 
-func (g *GitHubClient) GetRelease(id int) (*github.RepositoryRelease, error) {
+func (g *gitlabClient) GetRelease(id int) (*gitlab.RepositoryRelease, error) {
 	release, res, err := g.client.Repositories.GetRelease(context.TODO(), g.owner, g.repository, id)
 	if err != nil {
-		return &github.RepositoryRelease{}, err
+		return &gitlab.RepositoryRelease{}, err
 	}
 
 	err = res.Body.Close()
@@ -137,10 +137,10 @@ func (g *GitHubClient) GetRelease(id int) (*github.RepositoryRelease, error) {
 	return release, nil
 }
 
-func (g *GitHubClient) CreateRelease(release github.RepositoryRelease) (*github.RepositoryRelease, error) {
+func (g *gitlabClient) CreateRelease(release gitlab.RepositoryRelease) (*gitlab.RepositoryRelease, error) {
 	createdRelease, res, err := g.client.Repositories.CreateRelease(context.TODO(), g.owner, g.repository, &release)
 	if err != nil {
-		return &github.RepositoryRelease{}, err
+		return &gitlab.RepositoryRelease{}, err
 	}
 
 	err = res.Body.Close()
@@ -151,14 +151,14 @@ func (g *GitHubClient) CreateRelease(release github.RepositoryRelease) (*github.
 	return createdRelease, nil
 }
 
-func (g *GitHubClient) UpdateRelease(release github.RepositoryRelease) (*github.RepositoryRelease, error) {
+func (g *gitlabClient) UpdateRelease(release gitlab.RepositoryRelease) (*gitlab.RepositoryRelease, error) {
 	if release.ID == nil {
 		return nil, errors.New("release did not have an ID: has it been saved yet?")
 	}
 
 	updatedRelease, res, err := g.client.Repositories.EditRelease(context.TODO(), g.owner, g.repository, *release.ID, &release)
 	if err != nil {
-		return &github.RepositoryRelease{}, err
+		return &gitlab.RepositoryRelease{}, err
 	}
 
 	err = res.Body.Close()
@@ -169,7 +169,7 @@ func (g *GitHubClient) UpdateRelease(release github.RepositoryRelease) (*github.
 	return updatedRelease, nil
 }
 
-func (g *GitHubClient) ListReleaseAssets(release github.RepositoryRelease) ([]*github.ReleaseAsset, error) {
+func (g *gitlabClient) ListReleaseAssets(release gitlab.RepositoryRelease) ([]*gitlab.ReleaseAsset, error) {
 	assets, res, err := g.client.Repositories.ListReleaseAssets(context.TODO(), g.owner, g.repository, *release.ID, nil)
 	if err != nil {
 		return nil, err
@@ -183,13 +183,13 @@ func (g *GitHubClient) ListReleaseAssets(release github.RepositoryRelease) ([]*g
 	return assets, nil
 }
 
-func (g *GitHubClient) UploadReleaseAsset(release github.RepositoryRelease, name string, file *os.File) error {
+func (g *gitlabClient) UploadReleaseAsset(release gitlab.RepositoryRelease, name string, file *os.File) error {
 	_, res, err := g.client.Repositories.UploadReleaseAsset(
 		context.TODO(),
 		g.owner,
 		g.repository,
 		*release.ID,
-		&github.UploadOptions{
+		&gitlab.UploadOptions{
 			Name: name,
 		},
 		file,
@@ -201,7 +201,7 @@ func (g *GitHubClient) UploadReleaseAsset(release github.RepositoryRelease, name
 	return res.Body.Close()
 }
 
-func (g *GitHubClient) DeleteReleaseAsset(asset github.ReleaseAsset) error {
+func (g *gitlabClient) DeleteReleaseAsset(asset gitlab.ReleaseAsset) error {
 	res, err := g.client.Repositories.DeleteReleaseAsset(context.TODO(), g.owner, g.repository, *asset.ID)
 	if err != nil {
 		return err
@@ -210,7 +210,7 @@ func (g *GitHubClient) DeleteReleaseAsset(asset github.ReleaseAsset) error {
 	return res.Body.Close()
 }
 
-func (g *GitHubClient) DownloadReleaseAsset(asset github.ReleaseAsset) (io.ReadCloser, error) {
+func (g *gitlabClient) DownloadReleaseAsset(asset gitlab.ReleaseAsset) (io.ReadCloser, error) {
 	res, redir, err := g.client.Repositories.DownloadReleaseAsset(context.TODO(), g.owner, g.repository, *asset.ID)
 	if err != nil {
 		return nil, err
@@ -228,9 +228,9 @@ func (g *GitHubClient) DownloadReleaseAsset(asset github.ReleaseAsset) (io.ReadC
 	return res, err
 }
 
-func (g *GitHubClient) GetTarballLink(tag string) (*url.URL, error) {
-	opt := &github.RepositoryContentGetOptions{Ref: tag}
-	u, res, err := g.client.Repositories.GetArchiveLink(context.TODO(), g.owner, g.repository, github.Tarball, opt)
+func (g *gitlabClient) GetTarballLink(tag string) (*url.URL, error) {
+	opt := &gitlab.RepositoryContentGetOptions{Ref: tag}
+	u, res, err := g.client.Repositories.GetArchiveLink(context.TODO(), g.owner, g.repository, gitlab.Tarball, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -238,9 +238,9 @@ func (g *GitHubClient) GetTarballLink(tag string) (*url.URL, error) {
 	return u, nil
 }
 
-func (g *GitHubClient) GetZipballLink(tag string) (*url.URL, error) {
-	opt := &github.RepositoryContentGetOptions{Ref: tag}
-	u, res, err := g.client.Repositories.GetArchiveLink(context.TODO(), g.owner, g.repository, github.Zipball, opt)
+func (g *gitlabClient) GetZipballLink(tag string) (*url.URL, error) {
+	opt := &gitlab.RepositoryContentGetOptions{Ref: tag}
+	u, res, err := g.client.Repositories.GetArchiveLink(context.TODO(), g.owner, g.repository, gitlab.Zipball, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func (g *GitHubClient) GetZipballLink(tag string) (*url.URL, error) {
 	return u, nil
 }
 
-func (g *GitHubClient) GetRef(tag string) (*github.Reference, error) {
+func (g *gitlabClient) GetRef(tag string) (*gitlab.Reference, error) {
 	ref, res, err := g.client.Git.GetRef(context.TODO(), g.owner, g.repository, "tags/"+tag)
 	if err != nil {
 		return nil, err
@@ -264,9 +264,9 @@ func oauthClient(ctx context.Context, source Source) (*http.Client, error) {
 
 	oauthClient := oauth2.NewClient(ctx, ts)
 
-	githubHTTPClient := &http.Client{
+	gitlabHTTPClient := &http.Client{
 		Transport: oauthClient.Transport,
 	}
 
-	return githubHTTPClient, nil
+	return gitlabHTTPClient, nil
 }
