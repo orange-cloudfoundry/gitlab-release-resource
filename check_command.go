@@ -2,69 +2,65 @@ package resource
 
 import (
 	"sort"
-	"strconv"
-
-	"github.com/google/go-github/github"
 
 	"github.com/cppforlife/go-semi-semantic/version"
+	"github.com/xanzy/go-gitlab"
 )
 
 type CheckCommand struct {
-	github GitHub
+	gitlab GitLab
 }
 
-func NewCheckCommand(github GitHub) *CheckCommand {
+func NewCheckCommand(gitlab GitLab) *CheckCommand {
 	return &CheckCommand{
-		github: github,
+		gitlab: gitlab,
 	}
 }
 
 func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
-	releases, err := c.github.ListReleases()
+	var tags []*gitlab.Tag
+	var err error
+	if (request.Version == Version{}) {
+		tags, err = c.gitlab.ListTags()
+	} else {
+		tags, err = c.gitlab.ListTagsUntil(request.Version.Tag)
+	}
+
 	if err != nil {
 		return []Version{}, err
 	}
 
-	if len(releases) == 0 {
+	if len(tags) == 0 {
 		return []Version{}, nil
 	}
 
-	var filteredReleases []*github.RepositoryRelease
+	var filteredTags []*gitlab.Tag
 
+	// TODO: make ListTagsUntil work better with this
 	versionParser, err := newVersionParser(request.Source.TagFilter)
 	if err != nil {
 		return []Version{}, err
 	}
 
-	for _, release := range releases {
-		if request.Source.Drafts != *release.Draft {
+	for _, tag := range tags {
+		if _, err := version.NewVersionFromString(versionParser.parse(tag.Name)); err != nil {
 			continue
 		}
 
-		// Should we skip this release
-		//   a- prerelease condition dont match our source config
-		//   b- release condition match  prerealse in github since github has true/false to describe release/prerelase
-		if request.Source.PreRelease != *release.Prerelease && request.Source.Release == *release.Prerelease {
+		if tag.Release == nil {
 			continue
 		}
 
-		if release.TagName == nil {
-			continue
-		}
-		if _, err := version.NewVersionFromString(versionParser.parse(*release.TagName)); err != nil {
-			continue
-		}
-
-		filteredReleases = append(filteredReleases, release)
+		filteredTags = append(filteredTags, tag)
 	}
 
-	sort.Slice(filteredReleases, func(i, j int) bool {
-		first, err := version.NewVersionFromString(versionParser.parse(*filteredReleases[i].TagName))
+	sort.Slice(filteredTags, func(i, j int) bool {
+		first, err := version.NewVersionFromString(versionParser.parse(filteredTags[i].Name))
 		if err != nil {
 			return true
 		}
 
-		second, err := version.NewVersionFromString(versionParser.parse(*filteredReleases[j].TagName))
+		second, err := version.NewVersionFromString(versionParser.parse(filteredTags[j].Name))
 		if err != nil {
 			return false
 		}
@@ -72,37 +68,32 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 		return first.IsLt(second)
 	})
 
-	if len(filteredReleases) == 0 {
+	if len(filteredTags) == 0 {
 		return []Version{}, nil
 	}
-	latestRelease := filteredReleases[len(filteredReleases)-1]
+	latestTag := filteredTags[len(filteredTags)-1]
 
 	if (request.Version == Version{}) {
 		return []Version{
-			versionFromRelease(latestRelease),
+			Version{Tag: latestTag.Name},
 		}, nil
 	}
 
-	if *latestRelease.TagName == request.Version.Tag {
+	if latestTag.Name == request.Version.Tag {
 		return []Version{}, nil
 	}
 
 	upToLatest := false
 	reversedVersions := []Version{}
 
-	for _, release := range filteredReleases {
+	for _, release := range filteredTags {
 		if !upToLatest {
-			if *release.Draft || *release.Prerelease {
-				id := *release.ID
-				upToLatest = request.Version.ID == strconv.Itoa(id)
-			} else {
-				version := *release.TagName
-				upToLatest = request.Version.Tag == version
-			}
+			version := release.Name
+			upToLatest = request.Version.Tag == version
 		}
 
 		if upToLatest {
-			reversedVersions = append(reversedVersions, versionFromRelease(release))
+			reversedVersions = append(reversedVersions, Version{Tag: release.Name})
 		}
 	}
 
@@ -110,7 +101,7 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 		// current version was removed; start over from latest
 		reversedVersions = append(
 			reversedVersions,
-			versionFromRelease(filteredReleases[len(filteredReleases)-1]),
+			Version{Tag: filteredTags[len(filteredTags)-1].Name},
 		)
 	}
 

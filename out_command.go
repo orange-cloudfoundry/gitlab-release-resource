@@ -4,21 +4,20 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-github/github"
+	"github.com/xanzy/go-gitlab"
 )
 
 type OutCommand struct {
-	github GitHub
+	gitlab GitLab
 	writer io.Writer
 }
 
-func NewOutCommand(github GitHub, writer io.Writer) *OutCommand {
+func NewOutCommand(gitlab GitLab, writer io.Writer) *OutCommand {
 	return &OutCommand{
-		github: github,
+		gitlab: gitlab,
 		writer: writer,
 	}
 }
@@ -38,6 +37,11 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 
 	tag = request.Params.TagPrefix + tag
 
+	targetCommitish, err = c.fileContents(filepath.Join(sourceDir, request.Params.CommitishPath))
+	if err != nil {
+		return OutResponse{}, err
+	}
+
 	var body string
 	bodySpecified := false
 	if request.Params.BodyPath != "" {
@@ -49,82 +53,39 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 		}
 	}
 
-	targetCommitish := ""
-	if request.Params.CommitishPath != "" {
-		targetCommitish, err = c.fileContents(filepath.Join(sourceDir, request.Params.CommitishPath))
-		if err != nil {
-			return OutResponse{}, err
-		}
+	release := &gitlab.RepositoryRelease{
+		Name:            gitlab.String(name),
+		TagName:         gitlab.String(tag),
+		Body:            gitlab.String(body),
+		TargetCommitish: gitlab.String(targetCommitish),
 	}
 
-	draft := request.Source.Drafts
-	prerelease := false
-	if request.Source.PreRelease == true && request.Source.Release == false {
-		prerelease = request.Source.PreRelease
-	}
-
-	release := &github.RepositoryRelease{
-		Name:            github.String(name),
-		TagName:         github.String(tag),
-		Body:            github.String(body),
-		Draft:           github.Bool(draft),
-		Prerelease:      github.Bool(prerelease),
-		TargetCommitish: github.String(targetCommitish),
-	}
-
-	existingReleases, err := c.github.ListReleases()
+	tagExists := false
+	existingTag, err := c.gitlab.GetTag(tag)
 	if err != nil {
-		return OutResponse{}, err
+		//TODO: improve the check to be based on the specific error
+		tagExists = true
 	}
 
-	var existingRelease *github.RepositoryRelease
-	for _, e := range existingReleases {
-		if e.TagName != nil && *e.TagName == tag {
-			existingRelease = e
-			break
-		}
-	}
-
-	if existingRelease != nil {
-		releaseAssets, err := c.github.ListReleaseAssets(*existingRelease)
-		if err != nil {
-			return OutResponse{}, err
-		}
-
-		existingRelease.Name = github.String(name)
-		existingRelease.TargetCommitish = github.String(targetCommitish)
-		existingRelease.Draft = github.Bool(draft)
-		existingRelease.Prerelease = github.Bool(prerelease)
-
-		if bodySpecified {
-			existingRelease.Body = github.String(body)
-		} else {
-			existingRelease.Body = nil
-		}
-
-		for _, asset := range releaseAssets {
-			fmt.Fprintf(c.writer, "clearing existing asset: %s\n", *asset.Name)
-
-			err := c.github.DeleteReleaseAsset(*asset)
-			if err != nil {
-				return OutResponse{}, err
-			}
-		}
-
-		fmt.Fprintf(c.writer, "updating release %s\n", name)
-
-		release, err = c.github.UpdateRelease(*existingRelease)
-		if err != nil {
-			return OutResponse{}, err
-		}
-	} else {
-		fmt.Fprintf(c.writer, "creating release %s\n", name)
-		release, err = c.github.CreateRelease(*release)
+	// create the tag first, as next sections assume the tag exists
+	if !tagExists {
+		tag, err := c.gitlab.CreateTag(targetCommitish, tag)
 		if err != nil {
 			return OutResponse{}, err
 		}
 	}
 
+	// create a new release
+	_, err = c.gitlab.CreateRelease(tag, "Auto-generated from Concourse GitLab Release Resource")
+	if err != nil {
+		// if 409 error occurs, this means the release already existed, so just skip to the next section (update the release)
+		if err.Error() != "release already exists" {
+			return OutResponse{}, err
+		}
+	}
+
+	// upload files
+	var fileLinks []string
 	for _, fileGlob := range params.Globs {
 		matches, err := filepath.Glob(filepath.Join(sourceDir, fileGlob))
 		if err != nil {
@@ -136,12 +97,16 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 		}
 
 		for _, filePath := range matches {
-			err := c.upload(release, filePath)
+			projectFile, err := c.UploadProjectFile(filePath)
 			if err != nil {
 				return OutResponse{}, err
 			}
+			fileLinks = append(fileLinks, projectFile.Markdown)
 		}
 	}
+
+	// update the release
+	release, err = c.gitlab.UpdateRelease(tag, fileLinks.Join("\n"))
 
 	return OutResponse{
 		Version:  versionFromRelease(release),
@@ -156,46 +121,4 @@ func (c *OutCommand) fileContents(path string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(contents)), nil
-}
-
-func (c *OutCommand) upload(release *github.RepositoryRelease, filePath string) error {
-	fmt.Fprintf(c.writer, "uploading %s\n", filePath)
-
-	name := filepath.Base(filePath)
-
-	var retryErr error
-	for i := 0; i < 10; i++ {
-		file, err := os.Open(filePath)
-		if err != nil {
-			return err
-		}
-
-		defer file.Close()
-
-		retryErr = c.github.UploadReleaseAsset(*release, name, file)
-		if retryErr == nil {
-			break
-		}
-
-		assets, err := c.github.ListReleaseAssets(*release)
-		if err != nil {
-			return err
-		}
-
-		for _, asset := range assets {
-			if asset.Name != nil && *asset.Name == name {
-				err = c.github.DeleteReleaseAsset(*asset)
-				if err != nil {
-					return err
-				}
-				break
-			}
-		}
-	}
-
-	if retryErr != nil {
-		return retryErr
-	}
-
-	return nil
 }

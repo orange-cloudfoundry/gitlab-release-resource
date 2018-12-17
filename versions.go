@@ -2,9 +2,6 @@ package resource
 
 import (
 	"regexp"
-	"strconv"
-
-	"github.com/google/go-github/github"
 )
 
 var defaultTagFilter = "^v?([^v].*)"
@@ -30,12 +27,4 @@ func (vp *versionParser) parse(tag string) string {
 		return matches[len(matches)-1]
 	}
 	return ""
-}
-
-func versionFromRelease(release *github.RepositoryRelease) Version {
-	if *release.Draft {
-		return Version{ID: strconv.Itoa(*release.ID)}
-	} else {
-		return Version{Tag: *release.TagName}
-	}
 }

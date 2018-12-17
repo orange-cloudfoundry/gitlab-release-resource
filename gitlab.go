@@ -3,10 +3,8 @@ package resource
 import (
 	"crypto/tls"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
-	"os"
 
 	"golang.org/x/oauth2"
 
@@ -15,29 +13,21 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
-//go:generate counterfeiter . GitHub
+//go:generate counterfeiter . GitLab
 
-type gitlab interface {
-	ListReleases() ([]*gitlab.RepositoryRelease, error)
-	GetReleaseByTag(tag string) (*gitlab.RepositoryRelease, error)
-	GetRelease(id int) (*gitlab.RepositoryRelease, error)
-	CreateRelease(release gitlab.RepositoryRelease) (*gitlab.RepositoryRelease, error)
-	UpdateRelease(release gitlab.RepositoryRelease) (*gitlab.RepositoryRelease, error)
-
-	ListReleaseAssets(release gitlab.RepositoryRelease) ([]*gitlab.ReleaseAsset, error)
-	UploadReleaseAsset(release gitlab.RepositoryRelease, name string, file *os.File) error
-	DeleteReleaseAsset(asset gitlab.ReleaseAsset) error
-	DownloadReleaseAsset(asset gitlab.ReleaseAsset) (io.ReadCloser, error)
-
-	GetTarballLink(tag string) (*url.URL, error)
-	GetZipballLink(tag string) (*url.URL, error)
-	GetRef(tag string) (*gitlab.Reference, error)
+type GitLab interface {
+	ListTags() ([]*gitlab.Tag, error)
+	ListTagsUntil(tag_name string) ([]*gitlab.Tag, error)
+	GetTag(tag_name string) (*gitlab.Tag, error)
+	CreateTag(tag_name string, ref string) (*gitlab.Tag, error)
+	CreateRelease(tag_name string, description string) (*gitlab.Release, error)
+	UpdateRelease(description string) (*gitlab.Release, error)
+	UploadProjectFile(file string) (*gitlab.ProjectFile, error)
 }
 
 type gitlabClient struct {
 	client *gitlab.Client
 
-	owner      string
 	repository string
 }
 
@@ -52,221 +42,175 @@ func NewGitlabClient(source Source) (*gitlabClient, error) {
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 	}
 
-	if source.AccessToken != "" {
+	client := gitlab.NewClient(httpClient, source.AccessToken)
+
+	if source.GitlabAPIURL != "" {
 		var err error
-		httpClient, err = oauthClient(ctx, source)
+		baseUrl, err := url.Parse(source.GitlabAPIURL)
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	client := gitlab.NewClient(httpClient)
-
-	if source.gitlabAPIURL != "" {
-		var err error
-		client.BaseURL, err = url.Parse(source.gitlabAPIURL)
-		if err != nil {
-			return nil, err
-		}
-
-		client.UploadURL, err = url.Parse(source.gitlabAPIURL)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if source.gitlabUploadsURL != "" {
-		var err error
-		client.UploadURL, err = url.Parse(source.gitlabUploadsURL)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	owner := source.Owner
-	if source.User != "" {
-		owner = source.User
+		client.SetBaseURL(baseUrl.String())
 	}
 
 	return &gitlabClient{
 		client:     client,
-		owner:      owner,
 		repository: source.Repository,
 	}, nil
 }
 
-func (g *gitlabClient) ListReleases() ([]*gitlab.RepositoryRelease, error) {
-	releases, res, err := g.client.Repositories.ListReleases(context.TODO(), g.owner, g.repository, nil)
-	if err != nil {
-		return []*gitlab.RepositoryRelease{}, err
-	}
+func (g *gitlabClient) ListTags() ([]*gitlab.Tag, error) {
+	var allTags []*gitlab.Tag
 
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return releases, nil
-}
-
-func (g *gitlabClient) GetReleaseByTag(tag string) (*gitlab.RepositoryRelease, error) {
-	release, res, err := g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repository, tag)
-	if err != nil {
-		return &gitlab.RepositoryRelease{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return release, nil
-}
-
-func (g *gitlabClient) GetRelease(id int) (*gitlab.RepositoryRelease, error) {
-	release, res, err := g.client.Repositories.GetRelease(context.TODO(), g.owner, g.repository, id)
-	if err != nil {
-		return &gitlab.RepositoryRelease{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return release, nil
-}
-
-func (g *gitlabClient) CreateRelease(release gitlab.RepositoryRelease) (*gitlab.RepositoryRelease, error) {
-	createdRelease, res, err := g.client.Repositories.CreateRelease(context.TODO(), g.owner, g.repository, &release)
-	if err != nil {
-		return &gitlab.RepositoryRelease{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return createdRelease, nil
-}
-
-func (g *gitlabClient) UpdateRelease(release gitlab.RepositoryRelease) (*gitlab.RepositoryRelease, error) {
-	if release.ID == nil {
-		return nil, errors.New("release did not have an ID: has it been saved yet?")
-	}
-
-	updatedRelease, res, err := g.client.Repositories.EditRelease(context.TODO(), g.owner, g.repository, *release.ID, &release)
-	if err != nil {
-		return &gitlab.RepositoryRelease{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return updatedRelease, nil
-}
-
-func (g *gitlabClient) ListReleaseAssets(release gitlab.RepositoryRelease) ([]*gitlab.ReleaseAsset, error) {
-	assets, res, err := g.client.Repositories.ListReleaseAssets(context.TODO(), g.owner, g.repository, *release.ID, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return assets, nil
-}
-
-func (g *gitlabClient) UploadReleaseAsset(release gitlab.RepositoryRelease, name string, file *os.File) error {
-	_, res, err := g.client.Repositories.UploadReleaseAsset(
-		context.TODO(),
-		g.owner,
-		g.repository,
-		*release.ID,
-		&gitlab.UploadOptions{
-			Name: name,
+	opt := &gitlab.ListTagsOptions{
+		ListOptions: gitlab.ListOptions{
+			PerPage: 100,
+			Page:    1,
 		},
-		file,
-	)
-	if err != nil {
-		return err
+		OrderBy: gitlab.String("updated"),
+		Sort:    gitlab.String("desc"),
 	}
 
-	return res.Body.Close()
-}
-
-func (g *gitlabClient) DeleteReleaseAsset(asset gitlab.ReleaseAsset) error {
-	res, err := g.client.Repositories.DeleteReleaseAsset(context.TODO(), g.owner, g.repository, *asset.ID)
-	if err != nil {
-		return err
-	}
-
-	return res.Body.Close()
-}
-
-func (g *gitlabClient) DownloadReleaseAsset(asset gitlab.ReleaseAsset) (io.ReadCloser, error) {
-	res, redir, err := g.client.Repositories.DownloadReleaseAsset(context.TODO(), g.owner, g.repository, *asset.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	if redir != "" {
-		resp, err := http.Get(redir)
+	for {
+		tags, res, err := g.client.Tags.ListTags(g.repository, opt)
 		if err != nil {
-			return nil, err
+			return []*gitlab.Tag{}, err
 		}
 
-		return resp.Body, nil
+		if opt.Page >= res.TotalPages {
+			break
+		}
+
+		opt.Page = res.NextPage
+
+		allTags = append(allTags, tags...)
 	}
 
-	return res, err
+	return allTags, nil
 }
 
-func (g *gitlabClient) GetTarballLink(tag string) (*url.URL, error) {
-	opt := &gitlab.RepositoryContentGetOptions{Ref: tag}
-	u, res, err := g.client.Repositories.GetArchiveLink(context.TODO(), g.owner, g.repository, gitlab.Tarball, opt)
+func (g *gitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
+	var allTags []*gitlab.Tag
+
+	opt := &gitlab.ListTagsOptions{
+		ListOptions: gitlab.ListOptions{
+			PerPage: 100,
+			Page:    1,
+		},
+		OrderBy: gitlab.String("updated"),
+		Sort:    gitlab.String("desc"),
+	}
+
+	for {
+		tags, res, err := g.client.Tags.ListTags(g.repository, opt)
+		if err != nil {
+			return []*gitlab.Tag{}, err
+		}
+
+		if opt.Page >= res.TotalPages {
+			break
+		}
+
+		for i, tag := range tags {
+			if tag.Name == tag_name {
+				allTags = append(allTags, tags[:i]...)
+				break
+			}
+		}
+
+		opt.Page = res.NextPage
+		allTags = append(allTags, tags...)
+	}
+
+	return allTags, nil
+}
+
+func (g *gitlabClient) GetTag(tag_name string) (*gitlab.Tag, error) {
+	tag, res, err := g.client.Tags.GetTag(g.repository, tag_name)
+	if err != nil {
+		return &gitlab.Tag{}, err
+	}
+
+	err = res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
-	res.Body.Close()
-	return u, nil
+
+	return tag, nil
 }
 
-func (g *gitlabClient) GetZipballLink(tag string) (*url.URL, error) {
-	opt := &gitlab.RepositoryContentGetOptions{Ref: tag}
-	u, res, err := g.client.Repositories.GetArchiveLink(context.TODO(), g.owner, g.repository, gitlab.Zipball, opt)
+func (g *gitlabClient) CreateTag(ref string, tag_name string) (*gitlab.Tag, error) {
+	opt := &gitlab.CreateTagOptions{
+		TagName: gitlab.String(tag_name),
+		Ref:     gitlab.String(ref),
+		Message: gitlab.String(tag_name),
+	}
+
+	tag, res, err := g.client.Tags.CreateTag(g.repository, opt)
+	if err != nil {
+		return &gitlab.Tag{}, err
+	}
+
+	err = res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
-	res.Body.Close()
-	return u, nil
+
+	return tag, nil
 }
 
-func (g *gitlabClient) GetRef(tag string) (*gitlab.Reference, error) {
-	ref, res, err := g.client.Git.GetRef(context.TODO(), g.owner, g.repository, "tags/"+tag)
+func (g *gitlabClient) CreateRelease(tag_name string, description string) (*gitlab.Release, error) {
+	opt := &gitlab.CreateReleaseOptions{
+		Description: gitlab.String(description),
+	}
+
+	release, res, err := g.client.Tags.CreateRelease(g.repository, tag_name, opt)
+	if err != nil {
+		return &gitlab.Release{}, err
+	}
+
+	// https://docs.gitlab.com/ce/api/tags.html#create-a-new-release
+	// returns 409 if release already exists
+	if res.StatusCode == http.StatusConflict {
+		return nil, errors.New("release already exists")
+	}
+
+	err = res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
-	res.Body.Close()
-	return ref, nil
+
+	return release, nil
 }
 
-func oauthClient(ctx context.Context, source Source) (*http.Client, error) {
-	ts := oauth2.StaticTokenSource(&oauth2.Token{
-		AccessToken: source.AccessToken,
-	})
-
-	oauthClient := oauth2.NewClient(ctx, ts)
-
-	gitlabHTTPClient := &http.Client{
-		Transport: oauthClient.Transport,
+func (g *gitlabClient) UpdateRelease(tag_name string, description string) (*gitlab.Release, error) {
+	opt := &gitlab.UpdateReleaseOptions{
+		Description: gitlab.String(description),
 	}
 
-	return gitlabHTTPClient, nil
+	release, res, err := g.client.Tags.UpdateRelease(g.repository, tag_name, opt)
+	if err != nil {
+		return &gitlab.Release{}, err
+	}
+
+	err = res.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return release, nil
+}
+
+func (g *gitlabClient) UploadProjectFile(file string) (*gitlab.ProjectFile, error) {
+	projectFile, res, err := g.client.Projects.UploadFile(g.repository, file)
+	if err != nil {
+		return &gitlab.ProjectFile{}, err
+	}
+
+	err = res.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return projectFile, nil
 }

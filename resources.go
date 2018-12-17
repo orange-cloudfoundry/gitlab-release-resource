@@ -7,8 +7,8 @@ type Source struct {
 	// Deprecated; use Owner instead
 	User string `json:"user"`
 
-	GitHubAPIURL     string `json:"github_api_url"`
-	GitHubUploadsURL string `json:"github_uploads_url"`
+	GitlabAPIURL     string `json:"gitlab_api_url"`
+	GitlabUploadsURL string `json:"gitlab_uploads_url"`
 	AccessToken      string `json:"access_token"`
 	Drafts           bool   `json:"drafts"`
 	PreRelease       bool   `json:"pre_release"`
