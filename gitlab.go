@@ -3,8 +3,12 @@ package resource
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 
 	"golang.org/x/oauth2"
 
@@ -21,17 +25,19 @@ type GitLab interface {
 	GetTag(tag_name string) (*gitlab.Tag, error)
 	CreateTag(tag_name string, ref string) (*gitlab.Tag, error)
 	CreateRelease(tag_name string, description string) (*gitlab.Release, error)
-	UpdateRelease(description string) (*gitlab.Release, error)
+	UpdateRelease(tag_name string, description string) (*gitlab.Release, error)
 	UploadProjectFile(file string) (*gitlab.ProjectFile, error)
+	DownloadProjectFile(url, file string) error
 }
 
 type gitlabClient struct {
 	client *gitlab.Client
 
-	repository string
+	accessToken string
+	repository  string
 }
 
-func NewGitlabClient(source Source) (*gitlabClient, error) {
+func NewGitLabClient(source Source) (*gitlabClient, error) {
 	var httpClient = &http.Client{}
 	var ctx = context.TODO()
 
@@ -213,4 +219,42 @@ func (g *gitlabClient) UploadProjectFile(file string) (*gitlab.ProjectFile, erro
 	}
 
 	return projectFile, nil
+}
+
+func (g *gitlabClient) DownloadProjectFile(filePath, destPath string) error {
+	out, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	filePathRef, err := url.Parse(g.repository + filePath)
+	if err != nil {
+		return err
+	}
+
+	projectFileUrl := g.client.BaseURL().ResolveReference(filePathRef)
+
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", projectFileUrl.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Private-Token", g.accessToken)
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download file `%s`: HTTP status %d", filepath.Base(destPath), resp.StatusCode)
+	}
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

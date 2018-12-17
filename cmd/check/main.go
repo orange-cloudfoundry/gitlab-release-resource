@@ -4,19 +4,19 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/concourse/github-release-resource"
+	"github.com/edtan/gitlab-release-resource"
 )
 
 func main() {
 	request := resource.NewCheckRequest()
 	inputRequest(&request)
 
-	github, err := resource.NewGitHubClient(request.Source)
+	gitlab, err := resource.NewGitLabClient(request.Source)
 	if err != nil {
-		resource.Fatal("constructing github client", err)
+		resource.Fatal("constructing gitlab client", err)
 	}
 
-	command := resource.NewCheckCommand(github)
+	command := resource.NewCheckCommand(gitlab)
 	response, err := command.Run(request)
 	if err != nil {
 		resource.Fatal("running command", err)

@@ -5,22 +5,26 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
+	"strings"
 
-	"github.com/google/go-github/github"
+	"github.com/xanzy/go-gitlab"
 )
 
 type InCommand struct {
-	github GitHub
+	gitlab GitLab
 	writer io.Writer
 }
 
-func NewInCommand(github GitHub, writer io.Writer) *InCommand {
+type attachment struct {
+	Name string
+	URL  string
+}
+
+func NewInCommand(gitlab GitLab, writer io.Writer) *InCommand {
 	return &InCommand{
-		github: github,
+		gitlab: gitlab,
 		writer: writer,
 	}
 }
@@ -31,81 +35,65 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 		return InResponse{}, err
 	}
 
-	var foundRelease *github.RepositoryRelease
-	var commitSHA string
+	var foundTag *gitlab.Tag
 
-	if request.Version.Tag != "" {
-		foundRelease, err = c.github.GetReleaseByTag(request.Version.Tag)
+	foundTag, err = c.gitlab.GetTag(request.Version.Tag)
+	if err != nil {
+		return InResponse{}, err
+	}
+
+	if foundTag == nil {
+		return InResponse{}, errors.New("could not find tag")
+	}
+
+	tagPath := filepath.Join(destDir, "tag")
+	err = ioutil.WriteFile(tagPath, []byte(foundTag.Name), 0644)
+	if err != nil {
+		return InResponse{}, err
+	}
+
+	versionParser, err := newVersionParser(request.Source.TagFilter)
+	if err != nil {
+		return InResponse{}, err
+	}
+	version := versionParser.parse(foundTag.Name)
+	versionPath := filepath.Join(destDir, "version")
+	err = ioutil.WriteFile(versionPath, []byte(version), 0644)
+	if err != nil {
+		return InResponse{}, err
+	}
+
+	commitPath := filepath.Join(destDir, "commit_sha")
+	err = ioutil.WriteFile(commitPath, []byte(foundTag.Commit.ID), 0644)
+	if err != nil {
+		return InResponse{}, err
+	}
+
+	if foundTag.Release != nil && foundTag.Release != nil && foundTag.Release.Description != "" {
+		body := foundTag.Release.Description
+		bodyPath := filepath.Join(destDir, "body")
+		err = ioutil.WriteFile(bodyPath, []byte(body), 0644)
+		if err != nil {
+			return InResponse{}, err
+		}
 	} else {
-		id, _ := strconv.Atoi(request.Version.ID)
-		foundRelease, err = c.github.GetRelease(id)
+		return InResponse{}, errors.New("release notes for the tag was empty")
 	}
+
+	attachments, err := c.getAttachments(foundTag.Release.Description)
 	if err != nil {
 		return InResponse{}, err
 	}
 
-	if foundRelease == nil {
-		return InResponse{}, errors.New("no releases")
-	}
-
-	if foundRelease.TagName != nil && *foundRelease.TagName != "" {
-		tagPath := filepath.Join(destDir, "tag")
-		err = ioutil.WriteFile(tagPath, []byte(*foundRelease.TagName), 0644)
-		if err != nil {
-			return InResponse{}, err
-		}
-
-		versionParser, err := newVersionParser(request.Source.TagFilter)
-		if err != nil {
-			return InResponse{}, err
-		}
-		version := versionParser.parse(*foundRelease.TagName)
-		versionPath := filepath.Join(destDir, "version")
-		err = ioutil.WriteFile(versionPath, []byte(version), 0644)
-		if err != nil {
-			return InResponse{}, err
-		}
-
-		if foundRelease.Draft != nil && !*foundRelease.Draft {
-			commitPath := filepath.Join(destDir, "commit_sha")
-			commitSHA, err = c.resolveTagToCommitSHA(*foundRelease.TagName)
-			if err != nil {
-				return InResponse{}, err
-			}
-
-			if commitSHA != "" {
-				err = ioutil.WriteFile(commitPath, []byte(commitSHA), 0644)
-				if err != nil {
-					return InResponse{}, err
-				}
-			}
-		}
-
-		if foundRelease.Body != nil && *foundRelease.Body != "" {
-			body := *foundRelease.Body
-			bodyPath := filepath.Join(destDir, "body")
-			err = ioutil.WriteFile(bodyPath, []byte(body), 0644)
-			if err != nil {
-				return InResponse{}, err
-			}
-		}
-
-	}
-
-	assets, err := c.github.ListReleaseAssets(*foundRelease)
-	if err != nil {
-		return InResponse{}, err
-	}
-
-	for _, asset := range assets {
-		path := filepath.Join(destDir, *asset.Name)
+	for _, attachment := range attachments {
+		path := filepath.Join(destDir, attachment.Name)
 
 		var matchFound bool
 		if len(request.Params.Globs) == 0 {
 			matchFound = true
 		} else {
 			for _, glob := range request.Params.Globs {
-				matches, err := filepath.Match(glob, *asset.Name)
+				matches, err := filepath.Match(glob, attachment.Name)
 				if err != nil {
 					return InResponse{}, err
 				}
@@ -121,98 +109,36 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 			continue
 		}
 
-		fmt.Fprintf(c.writer, "downloading asset: %s\n", *asset.Name)
-
-		err := c.downloadAsset(asset, path)
+		fmt.Fprintf(c.writer, "downloading file: %s\n", attachment.Name)
+		err := c.gitlab.DownloadProjectFile(attachment.URL, path)
 		if err != nil {
-			return InResponse{}, err
-		}
-	}
-
-	if request.Params.IncludeSourceTarball {
-		u, err := c.github.GetTarballLink(request.Version.Tag)
-		if err != nil {
-			return InResponse{}, err
-		}
-		fmt.Fprintln(c.writer, "downloading source tarball to source.tar.gz")
-		if err := c.downloadFile(u.String(), filepath.Join(destDir, "source.tar.gz")); err != nil {
-			return InResponse{}, err
-		}
-	}
-
-	if request.Params.IncludeSourceZip {
-		u, err := c.github.GetZipballLink(request.Version.Tag)
-		if err != nil {
-			return InResponse{}, err
-		}
-		fmt.Fprintln(c.writer, "downloading source zip to source.zip")
-		if err := c.downloadFile(u.String(), filepath.Join(destDir, "source.zip")); err != nil {
 			return InResponse{}, err
 		}
 	}
 
 	return InResponse{
-		Version:  versionFromRelease(foundRelease),
-		Metadata: metadataFromRelease(foundRelease, commitSHA),
+		Version:  Version{Tag: foundTag.Name},
+		Metadata: metadataFromTag(foundTag),
 	}, nil
 }
 
-func (c *InCommand) downloadAsset(asset *github.ReleaseAsset, destPath string) error {
-	out, err := os.Create(destPath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
+// This resource stores the attachments as line-separated markdown links.
+func (c *InCommand) getAttachments(releaseBody string) ([]attachment, error) {
+	var attachments []attachment
 
-	content, err := c.github.DownloadReleaseAsset(*asset)
-	if err != nil {
-		return err
-	}
-	defer content.Close()
+	lines := strings.Split(releaseBody, "\n")
+	for _, line := range lines {
+		nameStart := strings.Index(line, "[") + 1
+		nameEnd := strings.Index(line, "]") - 1
+		urlStart := strings.Index(line, "(") + 1
+		urlEnd := strings.Index(line, ")") - 1
 
-	_, err = io.Copy(out, content)
-	if err != nil {
-		return err
-	}
+		attachments = append(attachments, attachment{
+			Name: line[nameStart:nameEnd],
+			URL:  line[urlStart:urlEnd],
+		})
 
-	return nil
-}
-
-func (c *InCommand) downloadFile(url, destPath string) error {
-	out, err := os.Create(destPath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download file `%s`: HTTP status %d", filepath.Base(destPath), resp.StatusCode)
 	}
 
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *InCommand) resolveTagToCommitSHA(tag string) (string, error) {
-	reference, err := c.github.GetRef(tag)
-	if err != nil {
-		return "", err
-	}
-
-	if *reference.Object.Type != "commit" {
-		fmt.Fprintf(c.writer, "could not resolve tag '%s' to commit: returned type is not 'commit' - only lightweight tags are supported\n", tag)
-		return "", err
-	}
-
-	return *reference.Object.SHA, err
+	return attachments, nil
 }

@@ -1,13 +1,12 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
-
-	"github.com/xanzy/go-gitlab"
 )
 
 type OutCommand struct {
@@ -25,10 +24,10 @@ func NewOutCommand(gitlab GitLab, writer io.Writer) *OutCommand {
 func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, error) {
 	params := request.Params
 
-	name, err := c.fileContents(filepath.Join(sourceDir, request.Params.NamePath))
-	if err != nil {
-		return OutResponse{}, err
-	}
+	// name, err := c.fileContents(filepath.Join(sourceDir, request.Params.NamePath))
+	// if err != nil {
+	// 	return OutResponse{}, err
+	// }
 
 	tag, err := c.fileContents(filepath.Join(sourceDir, request.Params.TagPath))
 	if err != nil {
@@ -37,31 +36,20 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 
 	tag = request.Params.TagPrefix + tag
 
-	targetCommitish, err = c.fileContents(filepath.Join(sourceDir, request.Params.CommitishPath))
+	targetCommitish, err := c.fileContents(filepath.Join(sourceDir, request.Params.CommitishPath))
 	if err != nil {
 		return OutResponse{}, err
 	}
 
-	var body string
-	bodySpecified := false
-	if request.Params.BodyPath != "" {
-		bodySpecified = true
-
-		body, err = c.fileContents(filepath.Join(sourceDir, request.Params.BodyPath))
-		if err != nil {
-			return OutResponse{}, err
-		}
-	}
-
-	release := &gitlab.RepositoryRelease{
-		Name:            gitlab.String(name),
-		TagName:         gitlab.String(tag),
-		Body:            gitlab.String(body),
-		TargetCommitish: gitlab.String(targetCommitish),
-	}
+	// if request.Params.BodyPath != "" {
+	// 	_, err := c.fileContents(filepath.Join(sourceDir, request.Params.BodyPath))
+	// 	if err != nil {
+	// 		return OutResponse{}, err
+	// 	}
+	// }
 
 	tagExists := false
-	existingTag, err := c.gitlab.GetTag(tag)
+	_, err = c.gitlab.GetTag(tag)
 	if err != nil {
 		//TODO: improve the check to be based on the specific error
 		tagExists = true
@@ -69,7 +57,7 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 
 	// create the tag first, as next sections assume the tag exists
 	if !tagExists {
-		tag, err := c.gitlab.CreateTag(targetCommitish, tag)
+		_, err := c.gitlab.CreateTag(targetCommitish, tag)
 		if err != nil {
 			return OutResponse{}, err
 		}
@@ -97,7 +85,7 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 		}
 
 		for _, filePath := range matches {
-			projectFile, err := c.UploadProjectFile(filePath)
+			projectFile, err := c.gitlab.UploadProjectFile(filePath)
 			if err != nil {
 				return OutResponse{}, err
 			}
@@ -106,11 +94,17 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 	}
 
 	// update the release
-	release, err = c.gitlab.UpdateRelease(tag, fileLinks.Join("\n"))
+	_, err = c.gitlab.UpdateRelease(tag, strings.Join(fileLinks, "\n"))
+
+	// get tag
+	savedTag, err := c.gitlab.GetTag(tag)
+	if err != nil {
+		return OutResponse{}, errors.New("could not get saved tag")
+	}
 
 	return OutResponse{
-		Version:  versionFromRelease(release),
-		Metadata: metadataFromRelease(release, ""),
+		Version:  Version{Tag: tag},
+		Metadata: metadataFromTag(savedTag),
 	}, nil
 }
 

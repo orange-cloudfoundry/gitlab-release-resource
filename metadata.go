@@ -1,63 +1,31 @@
 package resource
 
-import "github.com/google/go-github/github"
+import "github.com/xanzy/go-gitlab"
 
-func metadataFromRelease(release *github.RepositoryRelease, commitSHA string) []MetadataPair {
+func metadataFromTag(tag *gitlab.Tag) []MetadataPair {
 	metadata := []MetadataPair{}
 
-	if release.Name != nil {
+	if tag.Name != "" {
 		nameMeta := MetadataPair{
 			Name:  "name",
-			Value: *release.Name,
-		}
-
-		if release.HTMLURL != nil {
-			nameMeta.URL = *release.HTMLURL
+			Value: tag.Name,
 		}
 
 		metadata = append(metadata, nameMeta)
 	}
 
-	if release.HTMLURL != nil {
-		metadata = append(metadata, MetadataPair{
-			Name:  "url",
-			Value: *release.HTMLURL,
-		})
-	}
-
-	if release.Body != nil {
+	if tag.Release.Description != "" {
 		metadata = append(metadata, MetadataPair{
 			Name:     "body",
-			Value:    *release.Body,
+			Value:    tag.Release.Description,
 			Markdown: true,
 		})
 	}
 
-	if release.TagName != nil {
-		metadata = append(metadata, MetadataPair{
-			Name:  "tag",
-			Value: *release.TagName,
-		})
-	}
-
-	if commitSHA != "" {
+	if tag.Commit.ID != "" {
 		metadata = append(metadata, MetadataPair{
 			Name:  "commit_sha",
-			Value: commitSHA,
-		})
-	}
-
-	if *release.Draft {
-		metadata = append(metadata, MetadataPair{
-			Name:  "draft",
-			Value: "true",
-		})
-	}
-
-	if *release.Prerelease {
-		metadata = append(metadata, MetadataPair{
-			Name:  "pre-release",
-			Value: "true",
+			Value: tag.Commit.ID,
 		})
 	}
 	return metadata
