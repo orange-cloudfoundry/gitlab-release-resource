@@ -128,10 +128,14 @@ func (c *InCommand) getAttachments(releaseBody string) ([]attachment, error) {
 
 	lines := strings.Split(releaseBody, "\n")
 	for _, line := range lines {
-		nameStart := strings.Index(line, "[") + 1
-		nameEnd := strings.Index(line, "]") - 1
-		urlStart := strings.Index(line, "(") + 1
-		urlEnd := strings.Index(line, ")") - 1
+		nameStart := strings.Index(line, "[")
+		nameEnd := strings.Index(line, "]")
+		urlStart := strings.Index(line, "(")
+		urlEnd := strings.Index(line, ")")
+
+		if nameStart == -1 || nameEnd == -1 || urlStart == -1 || urlEnd == -1 {
+			continue
+		}
 
 		attachments = append(attachments, attachment{
 			Name: line[nameStart:nameEnd],

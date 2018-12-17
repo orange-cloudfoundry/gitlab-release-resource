@@ -1,19 +1,11 @@
 package resource
 
 type Source struct {
-	Owner      string `json:"owner"`
 	Repository string `json:"repository"`
 
-	// Deprecated; use Owner instead
-	User string `json:"user"`
-
-	GitlabAPIURL     string `json:"gitlab_api_url"`
-	GitlabUploadsURL string `json:"gitlab_uploads_url"`
-	AccessToken      string `json:"access_token"`
-	Drafts           bool   `json:"drafts"`
-	PreRelease       bool   `json:"pre_release"`
-	Release          bool   `json:"release"`
-	Insecure         bool   `json:"insecure"`
+	GitlabAPIURL string `json:"gitlab_api_url"`
+	AccessToken  string `json:"access_token"`
+	Insecure     bool   `json:"insecure"`
 
 	TagFilter string `json:"tag_filter"`
 }
@@ -25,19 +17,16 @@ type CheckRequest struct {
 
 func NewCheckRequest() CheckRequest {
 	res := CheckRequest{}
-	res.Source.Release = true
 	return res
 }
 
 func NewOutRequest() OutRequest {
 	res := OutRequest{}
-	res.Source.Release = true
 	return res
 }
 
 func NewInRequest() InRequest {
 	res := InRequest{}
-	res.Source.Release = true
 	return res
 }
 
