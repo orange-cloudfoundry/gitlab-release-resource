@@ -113,22 +113,27 @@ func (g *gitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 		if err != nil {
 			return []*gitlab.Tag{}, err
 		}
-		fmt.Printf("listing tags until %s, page %d out of %d\n", tag_name, opt.Page, res.TotalPages)
 
 		if opt.Page >= res.TotalPages {
 			break
 		}
 
+		foundTag := false
 		for i, tag := range tags {
 			if tag.Name == tag_name {
-				allTags = append(allTags, tags[:i]...)
+				allTags = append(allTags, tags[:i+1]...)
+				foundTag = true
 				break
 			}
+		}
+		if foundTag {
+			break
 		}
 
 		opt.Page = res.NextPage
 		allTags = append(allTags, tags...)
 	}
+	//fmt.Printf("%+v\n", allTags)
 
 	return allTags, nil
 }
