@@ -1,46 +1,22 @@
-# GitHub Releases Resource
+# GitLab Releases Resource
 
-Fetches and creates versioned GitHub resources.
+~~Fetches and creates versioned GitLab resources.~~
 
-> If you're seeing rate limits affecting you then please add a token to the source
-> configuration. This will increase your number of allowed requests.
+Note that this is still in development, and doesn't yet work.  It will hopefully be ready later this week.
 
 ## Source Configuration
 
-* `owner`: *Required.* The GitHub user or organization name for the repository
-  that the releases are in.
-
 * `repository`: *Required.* The repository name that contains the releases.
 
-* `access_token`: *Optional.* Used for accessing a release in a private-repo
+* `access_token`: *Required.* Used for accessing a release in a private-repo
    during an `in` and pushing a release to a repo during an `out`. The access
    token you create is only required to have the `repo` or `public_repo` scope.
 
 * `github_api_url`: *Optional.* If you use a non-public GitHub deployment then
   you can set your API URL here.
 
-* `github_uploads_url`: *Optional.* Some GitHub instances have a separate URL
-  for uploading. If `github_api_url` is set, this value defaults to the same
-  value, but if you have your own endpoint, this field will override it.
-
 * `insecure`: *Optional. Default `false`.* When set to `true`, concourse will allow
   insecure connection to your github API.
-
-* `release`: *Optional. Default `true`.* When set to `true`, `put` produces
-  release and `check` detects releases.  If `false`, `put` and `check` will ignore releases.
-  Note that releases must have semver compliant tags to be detected.
-
-* `pre_release`: *Optional. Default `false`.* When set to `true`, `put` produces
-  pre-release and `check` detects prereleases. If `false`, only non-prerelease releases
-  will be detected and published. Note that releases must have semver compliant
-  tags to be detected.
-  If `release` and `pre_release` are set to `true`, `put` produces
-  release and `check` detects prereleases and releases.
-
-* `drafts`: *Optional. Default `false`.* When set to `true`, `put` produces
-  drafts and `check` only detects drafts. If `false`, only non-draft releases
-  will be detected and published. Note that releases must have semver compliant
-  tags to be detected, even if they're drafts.
 
 * `tag_filter`: *Optional.* If set, override default tag filter regular
   expression of `v?([^v].*)`. If the filter includes a capture group, the capture
