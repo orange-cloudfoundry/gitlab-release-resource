@@ -1,23 +1,15 @@
-FROM golang:alpine as builder
-COPY . /go/src/github.com/concourse/github-release-resource
+FROM golang:1 as builder
+COPY . /src
+WORKDIR /src
 ENV CGO_ENABLED 0
-ENV GOPATH /go/src/github.com/concourse/github-release-resource/Godeps/_workspace:${GOPATH}
-ENV PATH /go/src/github.com/concourse/github-release-resource/Godeps/_workspace/bin:${PATH}
-RUN go build -o /assets/out github.com/concourse/github-release-resource/cmd/out
-RUN go build -o /assets/in github.com/concourse/github-release-resource/cmd/in
-RUN go build -o /assets/check github.com/concourse/github-release-resource/cmd/check
-RUN set -e; for pkg in $(go list ./...); do \
-		go test -o "/tests/$(basename $pkg).test" -c $pkg; \
-	done
+RUN go get -d ./...
+RUN go build -o /assets/in ./cmd/in
+RUN go build -o /assets/out ./cmd/out
+RUN go build -o /assets/check ./cmd/check
 
 FROM alpine:edge AS resource
-RUN apk add --update bash tzdata ca-certificates
-COPY --from=builder /assets /opt/resource
-
-FROM resource AS tests
-COPY --from=builder /tests /tests
-RUN set -e; for test in /tests/*.test; do \
-		$test; \
-	done
+RUN apk add --no-cache bash tzdata ca-certificates unzip zip gzip tar
+COPY --from=builder assets/ /opt/resource/
+RUN chmod +x /opt/resource/*
 
 FROM resource
