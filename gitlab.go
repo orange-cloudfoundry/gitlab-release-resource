@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/oauth2"
 
@@ -60,8 +61,9 @@ func NewGitLabClient(source Source) (*gitlabClient, error) {
 	}
 
 	return &gitlabClient{
-		client:     client,
-		repository: source.Repository,
+		client:      client,
+		repository:  source.Repository,
+		accessToken: source.AccessToken,
 	}, nil
 }
 
@@ -236,12 +238,21 @@ func (g *gitlabClient) DownloadProjectFile(filePath, destPath string) error {
 	}
 	defer out.Close()
 
+	// e.g. (group/project) + (/uploads/hash/filename)
 	filePathRef, err := url.Parse(g.repository + filePath)
 	if err != nil {
 		return err
 	}
 
+	// e.g. (https://gitlab-instance/api/v4) + (/group/project/uploads/hash/filename)
 	projectFileUrl := g.client.BaseURL().ResolveReference(filePathRef)
+
+	// https://gitlab.com/gitlab-org/gitlab-ce/issues/51447
+	nonApiUrl := strings.Replace(projectFileUrl.String(), "/api/v4", "", 1)
+	projectFileUrl, err = url.Parse(nonApiUrl)
+	if err != nil {
+		return err
+	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", projectFileUrl.String(), nil)
