@@ -2,7 +2,6 @@ package resource
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -109,7 +108,6 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 			continue
 		}
 
-		fmt.Fprintf(c.writer, "downloading file: %s\n", attachment.Name)
 		err := c.gitlab.DownloadProjectFile(attachment.URL, path)
 		if err != nil {
 			return InResponse{}, err
