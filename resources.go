@@ -68,8 +68,8 @@ type OutResponse struct {
 }
 
 type Version struct {
-	Tag string `json:"tag,omitempty"`
-	ID  string `json:"id,omitempty"`
+	Tag       string `json:"tag,omitempty"`
+	Commitish string `json:"commitish,omitempty"`
 }
 
 type MetadataPair struct {

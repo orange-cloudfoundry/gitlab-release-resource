@@ -1,8 +1,8 @@
 # GitLab Releases Resource
 
-~~Fetches and creates versioned GitLab resources.~~
+Fetches and creates versioned GitLab resources.  GitLab resources are metadata attached to tags.
 
-Note that this is still in development, and doesn't yet work.  It will hopefully be ready later this week.
+Note that this is still in development, and is still undergoing changes.  It may or may not work properly at the moment, but should hopefully somewhat more stable soon.
 
 ## Source Configuration
 
@@ -12,7 +12,7 @@ Note that this is still in development, and doesn't yet work.  It will hopefully
    during an `in` and pushing a release to a repo during an `out`. The access
    token you create is only required to have the `repo` or `public_repo` scope.
 
-* `github_api_url`: *Optional.* If you use a non-public GitHub deployment then
+* `gitlab_api_url`: *Optional.* If you use a non-public GitHub deployment then
   you can set your API URL here.
 
 * `insecure`: *Optional. Default `false`.* When set to `true`, concourse will allow
@@ -26,22 +26,20 @@ Note that this is still in development, and doesn't yet work.  It will hopefully
 ### Example
 
 ``` yaml
-- name: gh-release
-  type: github-release
+- name: gl-release
+  type: gitlab-release
   source:
-    owner: concourse
-    repository: concourse
+    repository: group/project
     access_token: abcdef1234567890
 ```
 
 ``` yaml
-- get: gh-release
+- get: gl-release
 ```
 
 ``` yaml
-- put: gh-release
+- put: gl-release
   params:
-    name: path/to/name/file
     tag: path/to/tag/file
     body: path/to/body/file
     globs:
@@ -91,21 +89,15 @@ Also creates the following files:
 * `globs`: *Optional.* A list of globs for files that will be downloaded from
   the release. If not specified, all assets will be fetched.
 
-* `include_source_tarball`: *Optional.* Enables downloading of the source
-  artifact tarball for the release as `source.tar.gz`. Defaults to `false`.
-
-* `include_source_zip`: *Optional.* Enables downloading of the source
-  artifact zip for the release as `source.zip`. Defaults to `false`.
-
 ### `out`: Publish a release.
 
-Given a name specified in `name`, a body specified in `body`, and the tag to use
-specified in `tag`, this creates a release on GitHub then uploads the files
+Given a `commitish` and  `tag`, this tags the commit and creates a release on GitLab, then uploads the files
 matching the patterns in `globs` to the release.
 
 #### Parameters
 
-* `name`: *Required.* A path to a file containing the name of the release.
+* `commitish`: *Required.* A path to a file containing the commitish (SHA, tag,
+  branch name) that the new tag and release should be associated with.
 
 * `tag`: *Required.* A path to a file containing the name of the Git tag to use
   for the release.
@@ -113,10 +105,7 @@ matching the patterns in `globs` to the release.
 * `tag_prefix`: *Optional.*  If specified, the tag read from the file will be
 prepended with this string. This is useful for adding v in front of version numbers.
 
-* `commitish`: *Optional.* A path to a file containing the commitish (SHA, tag,
-  branch name) that the release should be associated with.
-
-* `body`: *Optional.* A path to a file containing the body text of the release.
+* ~~`body`: *Optional.* A path to a file containing the body text of the release.~~ (Not yet supported)
 
 * `globs`: *Optional.* A list of globs for files that will be uploaded alongside
   the created release.
