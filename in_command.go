@@ -137,6 +137,9 @@ func (c *InCommand) getAttachments(releaseBody string) ([]attachment, error) {
 			continue
 		}
 
+		nameStart++
+		urlStart++
+
 		attachments = append(attachments, attachment{
 			Name: line[nameStart:nameEnd],
 			URL:  line[urlStart:urlEnd],
