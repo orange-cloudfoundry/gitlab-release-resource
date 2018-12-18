@@ -81,7 +81,6 @@ func (g *gitlabClient) ListTags() ([]*gitlab.Tag, error) {
 
 	for {
 		tags, res, err := g.client.Tags.ListTags(g.repository, opt)
-		fmt.Printf("listing tags, page %d out of %d\n", opt.Page, res.TotalPages)
 		if err != nil {
 			return []*gitlab.Tag{}, err
 		}
@@ -135,7 +134,6 @@ func (g *gitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 		opt.Page = res.NextPage
 		allTags = append(allTags, tags...)
 	}
-	//fmt.Printf("%+v\n", allTags)
 
 	return allTags, nil
 }
@@ -145,7 +143,6 @@ func (g *gitlabClient) GetTag(tag_name string) (*gitlab.Tag, error) {
 	if err != nil {
 		return &gitlab.Tag{}, err
 	}
-	fmt.Printf("getting tag %s", tag_name)
 
 	err = res.Body.Close()
 	if err != nil {
