@@ -2,6 +2,8 @@ package resource
 
 import (
 	"regexp"
+
+	"github.com/xanzy/go-gitlab"
 )
 
 var defaultTagFilter = "^v?([^v].*)"
@@ -27,4 +29,11 @@ func (vp *versionParser) parse(tag string) string {
 		return matches[len(matches)-1]
 	}
 	return ""
+}
+
+func versionFromTag(tag *gitlab.Tag) Version {
+	return Version{
+		Tag:       tag.Name,
+		CommitSHA: tag.Commit.ID,
+	}
 }

@@ -1,8 +1,10 @@
 # GitLab Releases Resource
 
-Fetches and creates versioned GitLab resources.  GitLab resources are metadata attached to tags.
+Fetches and creates versioned GitLab resources.  GitLab resources are metadata attached to tags.  Note that `check` will skip tags that do not have associated resources.
 
-Note that this is still in development, and is still undergoing changes.  It may or may not work properly at the moment, but should hopefully somewhat more stable soon.
+Note that this is still in development, and is still undergoing changes.  It may or may not work properly at the moment, but should hopefully be somewhat more stable soon.
+
+You may want to clean up your uploads folder over time if you re-run a put step with the same inputs, as this will simply re-upload the files under a new hash.
 
 ## Source Configuration
 

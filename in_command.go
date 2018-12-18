@@ -115,7 +115,7 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 	}
 
 	return InResponse{
-		Version:  Version{Tag: foundTag.Name},
+		Version:  versionFromTag(foundTag),
 		Metadata: metadataFromTag(foundTag),
 	}, nil
 }

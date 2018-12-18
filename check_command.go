@@ -74,9 +74,7 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 	latestTag := filteredTags[len(filteredTags)-1]
 
 	if (request.Version == Version{}) {
-		return []Version{
-			Version{Tag: latestTag.Name},
-		}, nil
+		return []Version{versionFromTag(latestTag)}, nil
 	}
 
 	if latestTag.Name == request.Version.Tag {
@@ -84,11 +82,11 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 		// https://github.com/concourse/github-release-resource/blob/master/check_command.go#L87
 		// but documentation says to return current item?
 		// https://concourse-ci.org/implementing-resources.html#section_resource-check
-		return []Version{Version{Tag: latestTag.Name}}, nil
+		return []Version{versionFromTag(latestTag)}, nil
 	}
 
 	upToLatest := false
-	reversedVersions := []Version{}
+	nextVersions := []Version{} // contains the requested version and all newer ones
 
 	for _, release := range filteredTags {
 		if !upToLatest {
@@ -97,17 +95,17 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 		}
 
 		if upToLatest {
-			reversedVersions = append(reversedVersions, Version{Tag: release.Name})
+			nextVersions = append(nextVersions, Version{Tag: release.Name})
 		}
 	}
 
 	if !upToLatest {
 		// current version was removed; start over from latest
-		reversedVersions = append(
-			reversedVersions,
-			Version{Tag: filteredTags[len(filteredTags)-1].Name},
+		nextVersions = append(
+			nextVersions,
+			versionFromTag(filteredTags[len(filteredTags)-1]),
 		)
 	}
 
-	return reversedVersions, nil
+	return nextVersions, nil
 }

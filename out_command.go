@@ -99,7 +99,7 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 	}
 
 	return OutResponse{
-		Version:  Version{Tag: tag_name},
+		Version:  versionFromTag(tag),
 		Metadata: metadataFromTag(tag),
 	}, nil
 }

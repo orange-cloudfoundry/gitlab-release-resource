@@ -69,7 +69,7 @@ type OutResponse struct {
 
 type Version struct {
 	Tag       string `json:"tag,omitempty"`
-	Commitish string `json:"commitish,omitempty"`
+	CommitSHA string `json:"commit_sha,omitempty"`
 }
 
 type MetadataPair struct {
