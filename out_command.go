@@ -29,12 +29,12 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 	// 	return OutResponse{}, err
 	// }
 
-	tag, err := c.fileContents(filepath.Join(sourceDir, request.Params.TagPath))
+	tag_name, err := c.fileContents(filepath.Join(sourceDir, request.Params.TagPath))
 	if err != nil {
 		return OutResponse{}, err
 	}
 
-	tag = request.Params.TagPrefix + tag
+	tag_name = request.Params.TagPrefix + tag_name
 
 	targetCommitish, err := c.fileContents(filepath.Join(sourceDir, request.Params.CommitishPath))
 	if err != nil {
@@ -48,26 +48,25 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 	// 	}
 	// }
 
-	tagExists := false
-	_, err = c.gitlab.GetTag(tag)
+	tagExists := true
+	tag, err := c.gitlab.GetTag(tag_name)
 	if err != nil {
 		//TODO: improve the check to be based on the specific error
-		tagExists = true
+		tagExists = false
 	}
 
 	// create the tag first, as next sections assume the tag exists
 	if !tagExists {
-		_, err := c.gitlab.CreateTag(targetCommitish, tag)
+		tag, err = c.gitlab.CreateTag(targetCommitish, tag_name)
 		if err != nil {
 			return OutResponse{}, err
 		}
 	}
 
-	// create a new release
-	_, err = c.gitlab.CreateRelease(tag, "Auto-generated from Concourse GitLab Release Resource")
-	if err != nil {
-		// if 409 error occurs, this means the release already existed, so just skip to the next section (update the release)
-		if err.Error() != "release already exists" {
+	// create a new release if it doesn't exist yet
+	if tag.Release == nil {
+		_, err = c.gitlab.CreateRelease(tag_name, "Auto-generated from Concourse GitLab Release Resource")
+		if err != nil {
 			return OutResponse{}, err
 		}
 	}
@@ -94,17 +93,14 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 	}
 
 	// update the release
-	_, err = c.gitlab.UpdateRelease(tag, strings.Join(fileLinks, "\n"))
-
-	// get tag
-	savedTag, err := c.gitlab.GetTag(tag)
+	_, err = c.gitlab.UpdateRelease(tag_name, strings.Join(fileLinks, "\n"))
 	if err != nil {
 		return OutResponse{}, errors.New("could not get saved tag")
 	}
 
 	return OutResponse{
-		Version:  Version{Tag: tag},
-		Metadata: metadataFromTag(savedTag),
+		Version:  Version{Tag: tag_name},
+		Metadata: metadataFromTag(tag),
 	}, nil
 }
 
