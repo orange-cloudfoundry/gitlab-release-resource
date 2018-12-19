@@ -93,7 +93,7 @@ Also creates the following files:
 
 ### `out`: Publish a release.
 
-Given a `commitish` and  `tag`, this tags the commit and creates a release on GitLab, then uploads the files
+Given a `commit_sha` and  `tag`, this tags the commit and creates a release on GitLab, then uploads the files
 matching the patterns in `globs` to the release.
 
 #### Parameters

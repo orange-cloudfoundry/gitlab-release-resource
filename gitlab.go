@@ -31,14 +31,14 @@ type GitLab interface {
 	DownloadProjectFile(url, file string) error
 }
 
-type gitlabClient struct {
+type GitlabClient struct {
 	client *gitlab.Client
 
 	accessToken string
 	repository  string
 }
 
-func NewGitLabClient(source Source) (*gitlabClient, error) {
+func NewGitLabClient(source Source) (*GitlabClient, error) {
 	var httpClient = &http.Client{}
 	var ctx = context.TODO()
 
@@ -51,23 +51,23 @@ func NewGitLabClient(source Source) (*gitlabClient, error) {
 
 	client := gitlab.NewClient(httpClient, source.AccessToken)
 
-	if source.GitlabAPIURL != "" {
+	if source.GitLabAPIURL != "" {
 		var err error
-		baseUrl, err := url.Parse(source.GitlabAPIURL)
+		baseUrl, err := url.Parse(source.GitLabAPIURL)
 		if err != nil {
 			return nil, err
 		}
 		client.SetBaseURL(baseUrl.String())
 	}
 
-	return &gitlabClient{
+	return &GitlabClient{
 		client:      client,
 		repository:  source.Repository,
 		accessToken: source.AccessToken,
 	}, nil
 }
 
-func (g *gitlabClient) ListTags() ([]*gitlab.Tag, error) {
+func (g *GitlabClient) ListTags() ([]*gitlab.Tag, error) {
 	var allTags []*gitlab.Tag
 
 	opt := &gitlab.ListTagsOptions{
@@ -97,7 +97,7 @@ func (g *gitlabClient) ListTags() ([]*gitlab.Tag, error) {
 	return allTags, nil
 }
 
-func (g *gitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
+func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 	var allTags []*gitlab.Tag
 
 	opt := &gitlab.ListTagsOptions{
@@ -138,7 +138,7 @@ func (g *gitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 	return allTags, nil
 }
 
-func (g *gitlabClient) GetTag(tag_name string) (*gitlab.Tag, error) {
+func (g *GitlabClient) GetTag(tag_name string) (*gitlab.Tag, error) {
 	tag, res, err := g.client.Tags.GetTag(g.repository, tag_name)
 	if err != nil {
 		return &gitlab.Tag{}, err
@@ -152,7 +152,7 @@ func (g *gitlabClient) GetTag(tag_name string) (*gitlab.Tag, error) {
 	return tag, nil
 }
 
-func (g *gitlabClient) CreateTag(ref string, tag_name string) (*gitlab.Tag, error) {
+func (g *GitlabClient) CreateTag(ref string, tag_name string) (*gitlab.Tag, error) {
 	opt := &gitlab.CreateTagOptions{
 		TagName: gitlab.String(tag_name),
 		Ref:     gitlab.String(ref),
@@ -172,7 +172,7 @@ func (g *gitlabClient) CreateTag(ref string, tag_name string) (*gitlab.Tag, erro
 	return tag, nil
 }
 
-func (g *gitlabClient) CreateRelease(tag_name string, description string) (*gitlab.Release, error) {
+func (g *GitlabClient) CreateRelease(tag_name string, description string) (*gitlab.Release, error) {
 	opt := &gitlab.CreateReleaseOptions{
 		Description: gitlab.String(description),
 	}
@@ -196,7 +196,7 @@ func (g *gitlabClient) CreateRelease(tag_name string, description string) (*gitl
 	return release, nil
 }
 
-func (g *gitlabClient) UpdateRelease(tag_name string, description string) (*gitlab.Release, error) {
+func (g *GitlabClient) UpdateRelease(tag_name string, description string) (*gitlab.Release, error) {
 	opt := &gitlab.UpdateReleaseOptions{
 		Description: gitlab.String(description),
 	}
@@ -214,7 +214,7 @@ func (g *gitlabClient) UpdateRelease(tag_name string, description string) (*gitl
 	return release, nil
 }
 
-func (g *gitlabClient) UploadProjectFile(file string) (*gitlab.ProjectFile, error) {
+func (g *GitlabClient) UploadProjectFile(file string) (*gitlab.ProjectFile, error) {
 	projectFile, res, err := g.client.Projects.UploadFile(g.repository, file)
 	if err != nil {
 		return &gitlab.ProjectFile{}, err
@@ -228,7 +228,7 @@ func (g *gitlabClient) UploadProjectFile(file string) (*gitlab.ProjectFile, erro
 	return projectFile, nil
 }
 
-func (g *gitlabClient) DownloadProjectFile(filePath, destPath string) error {
+func (g *GitlabClient) DownloadProjectFile(filePath, destPath string) error {
 	out, err := os.Create(destPath)
 	if err != nil {
 		return err

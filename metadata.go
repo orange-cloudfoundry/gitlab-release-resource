@@ -7,7 +7,7 @@ func metadataFromTag(tag *gitlab.Tag) []MetadataPair {
 
 	if tag.Name != "" {
 		nameMeta := MetadataPair{
-			Name:  "name",
+			Name:  "tag",
 			Value: tag.Name,
 		}
 
