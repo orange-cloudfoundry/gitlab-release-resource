@@ -68,7 +68,7 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 		return InResponse{}, err
 	}
 
-	if foundTag.Release != nil && foundTag.Release != nil && foundTag.Release.Description != "" {
+	if foundTag.Release != nil && foundTag.Release.Description != "" {
 		body := foundTag.Release.Description
 		bodyPath := filepath.Join(destDir, "body")
 		err = ioutil.WriteFile(bodyPath, []byte(body), 0644)
