@@ -78,10 +78,6 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 	}
 
 	if latestTag.Name == request.Version.Tag {
-		// GitHub release resource returns empty array:
-		// https://github.com/concourse/github-release-resource/blob/master/check_command.go#L87
-		// but documentation says to return current item?
-		// https://concourse-ci.org/implementing-resources.html#section_resource-check
 		return []Version{versionFromTag(latestTag)}, nil
 	}
 
