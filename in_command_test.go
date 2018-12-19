@@ -1,11 +1,8 @@
 package resource_test
 
 import (
-	"bytes"
 	"errors"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,17 +11,17 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
 
-	"github.com/google/go-github/github"
+	"github.com/xanzy/go-gitlab"
 
-	"github.com/concourse/github-release-resource"
-	"github.com/concourse/github-release-resource/fakes"
+	"github.com/edtan/gitlab-release-resource"
+	"github.com/edtan/gitlab-release-resource/fakes"
 )
 
 var _ = Describe("In Command", func() {
 	var (
 		command      *resource.InCommand
-		githubClient *fakes.FakeGitHub
-		githubServer *ghttp.Server
+		gitlabClient *fakes.FakeGitLab
+		gitlabServer *ghttp.Server
 
 		inRequest resource.InRequest
 
@@ -38,16 +35,16 @@ var _ = Describe("In Command", func() {
 	BeforeEach(func() {
 		var err error
 
-		githubClient = &fakes.FakeGitHub{}
-		githubServer = ghttp.NewServer()
-		command = resource.NewInCommand(githubClient, ioutil.Discard)
+		gitlabClient = &fakes.FakeGitLab{}
+		gitlabServer = ghttp.NewServer()
+		command = resource.NewInCommand(gitlabClient, ioutil.Discard)
 
-		tmpDir, err = ioutil.TempDir("", "github-release")
+		tmpDir, err = ioutil.TempDir("", "gitlab-release")
 		Ω(err).ShouldNot(HaveOccurred())
 
 		destDir = filepath.Join(tmpDir, "destination")
 
-		githubClient.DownloadReleaseAssetReturns(ioutil.NopCloser(bytes.NewBufferString("some-content")), nil)
+		gitlabClient.DownloadProjectFileReturns(nil)
 
 		inRequest = resource.InRequest{}
 	})
@@ -56,59 +53,19 @@ var _ = Describe("In Command", func() {
 		Ω(os.RemoveAll(tmpDir)).Should(Succeed())
 	})
 
-	buildRelease := func(id int, tag string, draft bool) *github.RepositoryRelease {
-		return &github.RepositoryRelease{
-			ID:         github.Int(id),
-			TagName:    github.String(tag),
-			HTMLURL:    github.String("http://google.com"),
-			Name:       github.String("release-name"),
-			Body:       github.String("*markdown*"),
-			Draft:      github.Bool(draft),
-			Prerelease: github.Bool(false),
-		}
-	}
-
-	buildNilTagRelease := func(id int) *github.RepositoryRelease {
-		return &github.RepositoryRelease{
-			ID:         github.Int(id),
-			HTMLURL:    github.String("http://google.com"),
-			Name:       github.String("release-name"),
-			Body:       github.String("*markdown*"),
-			Draft:      github.Bool(true),
-			Prerelease: github.Bool(false),
-		}
-	}
-
-	buildAsset := func(id int, name string) *github.ReleaseAsset {
-		return &github.ReleaseAsset{
-			ID:   github.Int(id),
-			Name: &name,
-		}
-	}
-
-	buildTagRef := func(tagRef, commitSHA string) *github.Reference {
-		return &github.Reference{
-			Ref: github.String(tagRef),
-			URL: github.String("https://example.com"),
-			Object: &github.GitObject{
-				Type: github.String("commit"),
-				SHA:  github.String(commitSHA),
-				URL:  github.String("https://example.com"),
+	buildTag := func(sha, tag string) *gitlab.Tag {
+		return &gitlab.Tag{
+			Commit: &gitlab.Commit{
+				ID: *gitlab.String(sha),
 			},
+			Name: *gitlab.String(tag),
 		}
 	}
 
 	Context("when there is a tagged release", func() {
 		Context("when a present version is specified", func() {
 			BeforeEach(func() {
-				githubClient.GetReleaseByTagReturns(buildRelease(1, "v0.35.0", false), nil)
-				githubClient.GetRefReturns(buildTagRef("v0.35.0", "f28085a4a8f744da83411f5e09fd7b1709149eee"), nil)
-
-				githubClient.ListReleaseAssetsReturns([]*github.ReleaseAsset{
-					buildAsset(0, "example.txt"),
-					buildAsset(1, "example.rtf"),
-					buildAsset(2, "example.wtf"),
-				}, nil)
+				gitlabClient.GetTagReturns(buildTag("v0.35.0", "abc123"), nil)
 
 				inRequest.Version = &resource.Version{
 					Tag: "v0.35.0",
@@ -138,26 +95,28 @@ var _ = Describe("In Command", func() {
 					inResponse, inErr = command.Run(destDir, inRequest)
 
 					Ω(inResponse.Metadata).Should(ConsistOf(
-						resource.MetadataPair{Name: "url", Value: "http://google.com"},
-						resource.MetadataPair{Name: "name", Value: "release-name", URL: "http://google.com"},
-						resource.MetadataPair{Name: "body", Value: "*markdown*", Markdown: true},
 						resource.MetadataPair{Name: "tag", Value: "v0.35.0"},
 						resource.MetadataPair{Name: "commit_sha", Value: "f28085a4a8f744da83411f5e09fd7b1709149eee"},
 					))
 				})
 
-				It("calls #GetReleastByTag with the correct arguments", func() {
+				It("calls #GetTag with the correct arguments", func() {
 					command.Run(destDir, inRequest)
 
-					Ω(githubClient.GetReleaseByTagArgsForCall(0)).Should(Equal("v0.35.0"))
+					Ω(gitlabClient.GetTagArgsForCall(0)).Should(Equal("v0.35.0"))
 				})
 
 				It("downloads only the files that match the globs", func() {
 					inResponse, inErr = command.Run(destDir, inRequest)
 
-					Expect(githubClient.DownloadReleaseAssetCallCount()).To(Equal(2))
-					Ω(githubClient.DownloadReleaseAssetArgsForCall(0)).Should(Equal(*buildAsset(0, "example.txt")))
-					Ω(githubClient.DownloadReleaseAssetArgsForCall(1)).Should(Equal(*buildAsset(1, "example.rtf")))
+					Expect(gitlabClient.DownloadProjectFileCallCount()).To(Equal(2))
+					arg1, arg2 := gitlabClient.DownloadProjectFileArgsForCall(0)
+					Ω(arg1).Should(Equal("example.txt"))
+					Ω(arg2).Should(Equal("path"))
+
+					arg1, arg2 = gitlabClient.DownloadProjectFileArgsForCall(1)
+					Ω(arg1).Should(Equal("example.rtf"))
+					Ω(arg2).Should(Equal("path"))
 				})
 
 				It("does create the body, tag and version files", func() {
@@ -185,8 +144,7 @@ var _ = Describe("In Command", func() {
 						inRequest.Source = resource.Source{
 							TagFilter: "package-(.*)",
 						}
-						githubClient.GetReleaseByTagReturns(buildRelease(1, "package-0.35.0", false), nil)
-						githubClient.GetRefReturns(buildTagRef("package-0.35.0", "f28085a4a8f744da83411f5e09fd7b1709149eee"), nil)
+						gitlabClient.GetTagReturns(buildTag("package-0.35.0", "abc123"), nil)
 						inResponse, inErr = command.Run(destDir, inRequest)
 					})
 
@@ -209,165 +167,6 @@ var _ = Describe("In Command", func() {
 					})
 				})
 
-				Context("when include_source_tarball is true", func() {
-					var tarballUrl *url.URL
-
-					BeforeEach(func() {
-						inRequest.Params.IncludeSourceTarball = true
-
-						tarballUrl, _ = url.Parse(githubServer.URL())
-						tarballUrl.Path = "/gimme-a-tarball/"
-					})
-
-					Context("when getting the tarball link succeeds", func() {
-						BeforeEach(func() {
-							githubClient.GetTarballLinkReturns(tarballUrl, nil)
-						})
-
-						Context("when downloading the tarball succeeds", func() {
-							BeforeEach(func() {
-								githubServer.AppendHandlers(
-									ghttp.CombineHandlers(
-										ghttp.VerifyRequest("GET", tarballUrl.Path),
-										ghttp.RespondWith(http.StatusOK, "source-tar-file-contents"),
-									),
-								)
-							})
-
-							It("succeeds", func() {
-								inResponse, inErr = command.Run(destDir, inRequest)
-
-								Expect(inErr).ToNot(HaveOccurred())
-							})
-
-							It("downloads the source tarball", func() {
-								inResponse, inErr = command.Run(destDir, inRequest)
-
-								Expect(githubServer.ReceivedRequests()).To(HaveLen(1))
-							})
-
-							It("saves the source tarball in the destination directory", func() {
-								inResponse, inErr = command.Run(destDir, inRequest)
-
-								fileContents, err := ioutil.ReadFile(filepath.Join(destDir, "source.tar.gz"))
-								fContents := string(fileContents)
-								Expect(err).NotTo(HaveOccurred())
-								Expect(fContents).To(Equal("source-tar-file-contents"))
-							})
-						})
-
-						Context("when downloading the tarball fails", func() {
-							BeforeEach(func() {
-								githubServer.AppendHandlers(
-									ghttp.CombineHandlers(
-										ghttp.VerifyRequest("GET", tarballUrl.Path),
-										ghttp.RespondWith(http.StatusInternalServerError, ""),
-									),
-								)
-							})
-
-							It("returns an appropriate error", func() {
-								inResponse, inErr = command.Run(destDir, inRequest)
-
-								Expect(inErr).To(MatchError("failed to download file `source.tar.gz`: HTTP status 500"))
-							})
-						})
-					})
-
-					Context("when getting the tarball link fails", func() {
-						disaster := errors.New("oh my")
-
-						BeforeEach(func() {
-							githubClient.GetTarballLinkReturns(nil, disaster)
-						})
-
-						It("returns the error", func() {
-							inResponse, inErr = command.Run(destDir, inRequest)
-
-							Expect(inErr).To(Equal(disaster))
-						})
-					})
-				})
-
-				Context("when include_source_zip is true", func() {
-					var zipUrl *url.URL
-
-					BeforeEach(func() {
-						inRequest.Params.IncludeSourceZip = true
-
-						zipUrl, _ = url.Parse(githubServer.URL())
-						zipUrl.Path = "/gimme-a-zip/"
-					})
-
-					Context("when getting the zip link succeeds", func() {
-						BeforeEach(func() {
-							githubClient.GetZipballLinkReturns(zipUrl, nil)
-						})
-
-						Context("when downloading the zip succeeds", func() {
-							BeforeEach(func() {
-								githubServer.AppendHandlers(
-									ghttp.CombineHandlers(
-										ghttp.VerifyRequest("GET", zipUrl.Path),
-										ghttp.RespondWith(http.StatusOK, "source-zip-file-contents"),
-									),
-								)
-							})
-
-							It("succeeds", func() {
-								inResponse, inErr = command.Run(destDir, inRequest)
-
-								Expect(inErr).ToNot(HaveOccurred())
-							})
-
-							It("downloads the source zip", func() {
-								inResponse, inErr = command.Run(destDir, inRequest)
-
-								Expect(githubServer.ReceivedRequests()).To(HaveLen(1))
-							})
-
-							It("saves the source zip in the destination directory", func() {
-								inResponse, inErr = command.Run(destDir, inRequest)
-
-								fileContents, err := ioutil.ReadFile(filepath.Join(destDir, "source.zip"))
-								fContents := string(fileContents)
-								Expect(err).NotTo(HaveOccurred())
-								Expect(fContents).To(Equal("source-zip-file-contents"))
-							})
-						})
-
-						Context("when downloading the zip fails", func() {
-							BeforeEach(func() {
-								githubServer.AppendHandlers(
-									ghttp.CombineHandlers(
-										ghttp.VerifyRequest("GET", zipUrl.Path),
-										ghttp.RespondWith(http.StatusInternalServerError, ""),
-									),
-								)
-							})
-
-							It("returns an appropriate error", func() {
-								inResponse, inErr = command.Run(destDir, inRequest)
-
-								Expect(inErr).To(MatchError("failed to download file `source.zip`: HTTP status 500"))
-							})
-						})
-					})
-
-					Context("when getting the zip link fails", func() {
-						disaster := errors.New("oh my")
-
-						BeforeEach(func() {
-							githubClient.GetZipballLinkReturns(nil, disaster)
-						})
-
-						It("returns the error", func() {
-							inResponse, inErr = command.Run(destDir, inRequest)
-
-							Expect(inErr).To(Equal(disaster))
-						})
-					})
-				})
 			})
 
 			Context("when no globs are specified", func() {
@@ -395,15 +194,23 @@ var _ = Describe("In Command", func() {
 				})
 
 				It("downloads all of the files", func() {
-					Ω(githubClient.DownloadReleaseAssetArgsForCall(0)).Should(Equal(*buildAsset(0, "example.txt")))
-					Ω(githubClient.DownloadReleaseAssetArgsForCall(1)).Should(Equal(*buildAsset(1, "example.rtf")))
-					Ω(githubClient.DownloadReleaseAssetArgsForCall(2)).Should(Equal(*buildAsset(2, "example.wtf")))
+					arg1, arg2 := gitlabClient.DownloadProjectFileArgsForCall(0)
+					Ω(arg1).Should(Equal("example.txt"))
+					Ω(arg2).Should(Equal("path"))
+
+					arg1, arg2 = gitlabClient.DownloadProjectFileArgsForCall(1)
+					Ω(arg1).Should(Equal("example.rtf"))
+					Ω(arg2).Should(Equal("path"))
+
+					arg1, arg2 = gitlabClient.DownloadProjectFileArgsForCall(2)
+					Ω(arg1).Should(Equal("example.rtf"))
+					Ω(arg2).Should(Equal("path"))
 				})
 			})
 
 			Context("when downloading an asset fails", func() {
 				BeforeEach(func() {
-					githubClient.DownloadReleaseAssetReturns(nil, errors.New("not this time"))
+					gitlabClient.DownloadProjectFileReturns(errors.New("not this time"))
 					inResponse, inErr = command.Run(destDir, inRequest)
 				})
 
@@ -411,25 +218,12 @@ var _ = Describe("In Command", func() {
 					Ω(inErr).Should(HaveOccurred())
 				})
 			})
-
-			Context("when listing release assets fails", func() {
-				disaster := errors.New("nope")
-
-				BeforeEach(func() {
-					githubClient.ListReleaseAssetsReturns(nil, disaster)
-					inResponse, inErr = command.Run(destDir, inRequest)
-				})
-
-				It("returns the error", func() {
-					Ω(inErr).Should(Equal(disaster))
-				})
-			})
 		})
 	})
 
 	Context("when no tagged release is present", func() {
 		BeforeEach(func() {
-			githubClient.GetReleaseByTagReturns(nil, nil)
+			gitlabClient.GetTagReturns(nil, nil)
 
 			inRequest.Version = &resource.Version{
 				Tag: "v0.40.0",
@@ -447,7 +241,7 @@ var _ = Describe("In Command", func() {
 		disaster := errors.New("nope")
 
 		BeforeEach(func() {
-			githubClient.GetReleaseByTagReturns(nil, disaster)
+			gitlabClient.GetTagReturns(nil, disaster)
 
 			inRequest.Version = &resource.Version{
 				Tag: "some-tag",
@@ -457,110 +251,6 @@ var _ = Describe("In Command", func() {
 
 		It("returns the error", func() {
 			Ω(inErr).Should(Equal(disaster))
-		})
-	})
-
-	Context("when there is a draft release", func() {
-		Context("which has a tag", func() {
-			BeforeEach(func() {
-				githubClient.GetReleaseReturns(buildRelease(1, "v0.35.0", true), nil)
-
-				inRequest.Version = &resource.Version{ID: "1"}
-				inResponse, inErr = command.Run(destDir, inRequest)
-			})
-
-			It("succeeds", func() {
-				Ω(inErr).ShouldNot(HaveOccurred())
-			})
-
-			It("returns the fetched version", func() {
-				Ω(inResponse.Version).Should(Equal(resource.Version{ID: "1"}))
-			})
-
-			It("has some sweet metadata", func() {
-				Ω(inResponse.Metadata).Should(ConsistOf(
-					resource.MetadataPair{Name: "url", Value: "http://google.com"},
-					resource.MetadataPair{Name: "name", Value: "release-name", URL: "http://google.com"},
-					resource.MetadataPair{Name: "body", Value: "*markdown*", Markdown: true},
-					resource.MetadataPair{Name: "tag", Value: "v0.35.0"},
-					resource.MetadataPair{Name: "draft", Value: "true"},
-				))
-			})
-
-			It("does create the tag and version files", func() {
-				contents, err := ioutil.ReadFile(path.Join(destDir, "tag"))
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(string(contents)).Should(Equal("v0.35.0"))
-
-				contents, err = ioutil.ReadFile(path.Join(destDir, "version"))
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(string(contents)).Should(Equal("0.35.0"))
-			})
-		})
-
-		Context("which has an empty tag", func() {
-			BeforeEach(func() {
-				githubClient.GetReleaseReturns(buildRelease(1, "", true), nil)
-
-				inRequest.Version = &resource.Version{ID: "1"}
-				inResponse, inErr = command.Run(destDir, inRequest)
-			})
-
-			It("succeeds", func() {
-				Ω(inErr).ShouldNot(HaveOccurred())
-			})
-
-			It("returns the fetched version", func() {
-				Ω(inResponse.Version).Should(Equal(resource.Version{ID: "1"}))
-			})
-
-			It("has some sweet metadata", func() {
-				Ω(inResponse.Metadata).Should(ConsistOf(
-					resource.MetadataPair{Name: "url", Value: "http://google.com"},
-					resource.MetadataPair{Name: "name", Value: "release-name", URL: "http://google.com"},
-					resource.MetadataPair{Name: "body", Value: "*markdown*", Markdown: true},
-					resource.MetadataPair{Name: "tag", Value: ""},
-					resource.MetadataPair{Name: "draft", Value: "true"},
-				))
-			})
-
-			It("does not create the tag and version files", func() {
-				Ω(path.Join(destDir, "tag")).ShouldNot(BeAnExistingFile())
-				Ω(path.Join(destDir, "version")).ShouldNot(BeAnExistingFile())
-				Ω(path.Join(destDir, "commit_sha")).ShouldNot(BeAnExistingFile())
-			})
-		})
-
-		Context("which has a nil tag", func() {
-			BeforeEach(func() {
-				githubClient.GetReleaseReturns(buildNilTagRelease(1), nil)
-
-				inRequest.Version = &resource.Version{ID: "1"}
-				inResponse, inErr = command.Run(destDir, inRequest)
-			})
-
-			It("succeeds", func() {
-				Ω(inErr).ShouldNot(HaveOccurred())
-			})
-
-			It("returns the fetched version", func() {
-				Ω(inResponse.Version).Should(Equal(resource.Version{ID: "1"}))
-			})
-
-			It("has some sweet metadata", func() {
-				Ω(inResponse.Metadata).Should(ConsistOf(
-					resource.MetadataPair{Name: "url", Value: "http://google.com"},
-					resource.MetadataPair{Name: "name", Value: "release-name", URL: "http://google.com"},
-					resource.MetadataPair{Name: "body", Value: "*markdown*", Markdown: true},
-					resource.MetadataPair{Name: "draft", Value: "true"},
-				))
-			})
-
-			It("does not create the tag and version files", func() {
-				Ω(path.Join(destDir, "tag")).ShouldNot(BeAnExistingFile())
-				Ω(path.Join(destDir, "version")).ShouldNot(BeAnExistingFile())
-				Ω(path.Join(destDir, "commit_sha")).ShouldNot(BeAnExistingFile())
-			})
 		})
 	})
 })

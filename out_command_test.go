@@ -9,10 +9,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/concourse/github-release-resource"
-	"github.com/concourse/github-release-resource/fakes"
+	"github.com/xanzy/go-gitlab"
 
-	"github.com/google/go-github/github"
+	"github.com/edtan/gitlab-release-resource"
+	"github.com/edtan/gitlab-release-resource/fakes"
 )
 
 func file(path, contents string) {
@@ -22,7 +22,7 @@ func file(path, contents string) {
 var _ = Describe("Out Command", func() {
 	var (
 		command      *resource.OutCommand
-		githubClient *fakes.FakeGitHub
+		gitlabClient *fakes.FakeGitLab
 
 		sourcesDir string
 
@@ -32,22 +32,22 @@ var _ = Describe("Out Command", func() {
 	BeforeEach(func() {
 		var err error
 
-		githubClient = &fakes.FakeGitHub{}
-		command = resource.NewOutCommand(githubClient, ioutil.Discard)
+		gitlabClient = &fakes.FakeGitLab{}
+		command = resource.NewOutCommand(gitlabClient, ioutil.Discard)
 
-		sourcesDir, err = ioutil.TempDir("", "github-release")
+		sourcesDir, err = ioutil.TempDir("", "gitlab-release")
 		Ω(err).ShouldNot(HaveOccurred())
 
-		githubClient.CreateReleaseStub = func(gh github.RepositoryRelease) (*github.RepositoryRelease, error) {
+		gitlabClient.CreateReleaseStub = func(gh gitlab.Tag) (*gitlab.Tag, error) {
 			createdRel := gh
-			createdRel.ID = github.Int(112)
-			createdRel.HTMLURL = github.String("http://google.com")
-			createdRel.Name = github.String("release-name")
-			createdRel.Body = github.String("*markdown*")
+			createdRel.ID = gitlab.Int(112)
+			createdRel.HTMLURL = gitlab.String("http://google.com")
+			createdRel.Name = gitlab.String("release-name")
+			createdRel.Body = gitlab.String("*markdown*")
 			return &createdRel, nil
 		}
 
-		githubClient.UpdateReleaseStub = func(gh github.RepositoryRelease) (*github.RepositoryRelease, error) {
+		gitlabClient.UpdateReleaseStub = func(gh gitlab.Tag) (*gitlab.Tag, error) {
 			return &gh, nil
 		}
 	})
@@ -57,34 +57,34 @@ var _ = Describe("Out Command", func() {
 	})
 
 	Context("when the release has already been created", func() {
-		existingAssets := []github.ReleaseAsset{
+		existingAssets := []gitlab.ReleaseAsset{
 			{
-				ID:   github.Int(456789),
-				Name: github.String("unicorns.txt"),
+				ID:   gitlab.Int(456789),
+				Name: gitlab.String("unicorns.txt"),
 			},
 			{
-				ID:    github.Int(3450798),
-				Name:  github.String("rainbows.txt"),
-				State: github.String("new"),
+				ID:    gitlab.Int(3450798),
+				Name:  gitlab.String("rainbows.txt"),
+				State: gitlab.String("new"),
 			},
 		}
 
-		existingReleases := []github.RepositoryRelease{
+		existingReleases := []gitlab.Tag{
 			{
-				ID:    github.Int(1),
-				Draft: github.Bool(true),
+				ID:    gitlab.Int(1),
+				Draft: gitlab.Bool(true),
 			},
 			{
-				ID:      github.Int(112),
-				TagName: github.String("some-tag-name"),
-				Assets:  []github.ReleaseAsset{existingAssets[0]},
-				Draft:   github.Bool(false),
+				ID:      gitlab.Int(112),
+				TagName: gitlab.String("some-tag-name"),
+				Assets:  []gitlab.ReleaseAsset{existingAssets[0]},
+				Draft:   gitlab.Bool(false),
 			},
 		}
 
 		BeforeEach(func() {
-			githubClient.ListReleasesStub = func() ([]*github.RepositoryRelease, error) {
-				rels := []*github.RepositoryRelease{}
+			gitlabClient.ListReleasesStub = func() ([]*gitlab.Tag, error) {
+				rels := []*gitlab.Tag{}
 				for _, r := range existingReleases {
 					c := r
 					rels = append(rels, &c)
@@ -93,8 +93,8 @@ var _ = Describe("Out Command", func() {
 				return rels, nil
 			}
 
-			githubClient.ListReleaseAssetsStub = func(github.RepositoryRelease) ([]*github.ReleaseAsset, error) {
-				assets := []*github.ReleaseAsset{}
+			gitlabClient.ListReleaseAssetsStub = func(gitlab.Tag) ([]*gitlab.ReleaseAsset, error) {
+				assets := []*gitlab.ReleaseAsset{}
 				for _, a := range existingAssets {
 					c := a
 					assets = append(assets, &c)
@@ -124,13 +124,13 @@ var _ = Describe("Out Command", func() {
 			_, err := command.Run(sourcesDir, request)
 			Ω(err).ShouldNot(HaveOccurred())
 
-			Ω(githubClient.ListReleaseAssetsCallCount()).Should(Equal(1))
-			Ω(githubClient.ListReleaseAssetsArgsForCall(0)).Should(Equal(existingReleases[1]))
+			Ω(gitlabClient.ListReleaseAssetsCallCount()).Should(Equal(1))
+			Ω(gitlabClient.ListReleaseAssetsArgsForCall(0)).Should(Equal(existingReleases[1]))
 
-			Ω(githubClient.DeleteReleaseAssetCallCount()).Should(Equal(2))
+			Ω(gitlabClient.DeleteReleaseAssetCallCount()).Should(Equal(2))
 
-			Ω(githubClient.DeleteReleaseAssetArgsForCall(0)).Should(Equal(existingAssets[0]))
-			Ω(githubClient.DeleteReleaseAssetArgsForCall(1)).Should(Equal(existingAssets[1]))
+			Ω(gitlabClient.DeleteReleaseAssetArgsForCall(0)).Should(Equal(existingAssets[0]))
+			Ω(gitlabClient.DeleteReleaseAssetArgsForCall(1)).Should(Equal(existingAssets[1]))
 		})
 
 		Context("when not set as a draft release", func() {
@@ -142,9 +142,9 @@ var _ = Describe("Out Command", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.UpdateReleaseCallCount()).Should(Equal(1))
+				Ω(gitlabClient.UpdateReleaseCallCount()).Should(Equal(1))
 
-				updatedRelease := githubClient.UpdateReleaseArgsForCall(0)
+				updatedRelease := gitlabClient.UpdateReleaseArgsForCall(0)
 				Ω(*updatedRelease.Name).Should(Equal("v0.3.12"))
 				Ω(*updatedRelease.Draft).Should(Equal(false))
 			})
@@ -159,9 +159,9 @@ var _ = Describe("Out Command", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.UpdateReleaseCallCount()).Should(Equal(1))
+				Ω(gitlabClient.UpdateReleaseCallCount()).Should(Equal(1))
 
-				updatedRelease := githubClient.UpdateReleaseArgsForCall(0)
+				updatedRelease := gitlabClient.UpdateReleaseArgsForCall(0)
 				Ω(*updatedRelease.Name).Should(Equal("v0.3.12"))
 				Ω(*updatedRelease.Draft).Should(Equal(true))
 			})
@@ -176,9 +176,9 @@ var _ = Describe("Out Command", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.UpdateReleaseCallCount()).Should(Equal(1))
+				Ω(gitlabClient.UpdateReleaseCallCount()).Should(Equal(1))
 
-				updatedRelease := githubClient.UpdateReleaseArgsForCall(0)
+				updatedRelease := gitlabClient.UpdateReleaseArgsForCall(0)
 				Ω(*updatedRelease.Name).Should(Equal("v0.3.12"))
 				Ω(updatedRelease.Body).Should(BeNil())
 			})
@@ -189,12 +189,12 @@ var _ = Describe("Out Command", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.UpdateReleaseCallCount()).Should(Equal(1))
+				Ω(gitlabClient.UpdateReleaseCallCount()).Should(Equal(1))
 
-				updatedRelease := githubClient.UpdateReleaseArgsForCall(0)
+				updatedRelease := gitlabClient.UpdateReleaseArgsForCall(0)
 				Ω(*updatedRelease.Name).Should(Equal("v0.3.12"))
 				Ω(*updatedRelease.Body).Should(Equal("this is a great release"))
-				Ω(updatedRelease.TargetCommitish).Should(Equal(github.String("")))
+				Ω(updatedRelease.TargetCommitish).Should(Equal(gitlab.String("")))
 			})
 		})
 
@@ -209,12 +209,12 @@ var _ = Describe("Out Command", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.UpdateReleaseCallCount()).Should(Equal(1))
+				Ω(gitlabClient.UpdateReleaseCallCount()).Should(Equal(1))
 
-				updatedRelease := githubClient.UpdateReleaseArgsForCall(0)
+				updatedRelease := gitlabClient.UpdateReleaseArgsForCall(0)
 				Ω(*updatedRelease.Name).Should(Equal("v0.3.12"))
 				Ω(*updatedRelease.Body).Should(Equal("this is a great release"))
-				Ω(updatedRelease.TargetCommitish).Should(Equal(github.String("1z22f1")))
+				Ω(updatedRelease.TargetCommitish).Should(Equal(gitlab.String("1z22f1")))
 			})
 		})
 	})
@@ -242,27 +242,27 @@ var _ = Describe("Out Command", func() {
 				request.Params.CommitishPath = "commitish"
 			})
 
-			It("creates a release on GitHub with the commitish", func() {
+			It("creates a release on gitlab with the commitish", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-				release := githubClient.CreateReleaseArgsForCall(0)
+				Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+				release := gitlabClient.CreateReleaseArgsForCall(0)
 
-				Ω(release.TargetCommitish).Should(Equal(github.String("a2f4a3")))
+				Ω(release.TargetCommitish).Should(Equal(gitlab.String("a2f4a3")))
 			})
 		})
 
 		Context("without a commitish", func() {
-			It("creates a release on GitHub without the commitish", func() {
+			It("creates a release on gitlab without the commitish", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-				release := githubClient.CreateReleaseArgsForCall(0)
+				Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+				release := gitlabClient.CreateReleaseArgsForCall(0)
 
-				// GitHub treats empty string the same as not suppying the field.
-				Ω(release.TargetCommitish).Should(Equal(github.String("")))
+				// gitlab treats empty string the same as not suppying the field.
+				Ω(release.TargetCommitish).Should(Equal(gitlab.String("")))
 			})
 		})
 
@@ -273,12 +273,12 @@ var _ = Describe("Out Command", func() {
 				request.Params.BodyPath = "body"
 			})
 
-			It("creates a release on GitHub", func() {
+			It("creates a release on gitlab", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-				release := githubClient.CreateReleaseArgsForCall(0)
+				Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+				release := gitlabClient.CreateReleaseArgsForCall(0)
 
 				Ω(*release.Name).Should(Equal("v0.3.12"))
 				Ω(*release.TagName).Should(Equal("0.3.12"))
@@ -291,8 +291,8 @@ var _ = Describe("Out Command", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-				release := githubClient.CreateReleaseArgsForCall(0)
+				Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+				release := gitlabClient.CreateReleaseArgsForCall(0)
 
 				Ω(*release.Name).Should(Equal("v0.3.12"))
 				Ω(*release.TagName).Should(Equal("0.3.12"))
@@ -304,8 +304,8 @@ var _ = Describe("Out Command", func() {
 			_, err := command.Run(sourcesDir, request)
 			Ω(err).ShouldNot(HaveOccurred())
 
-			Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-			release := githubClient.CreateReleaseArgsForCall(0)
+			Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+			release := gitlabClient.CreateReleaseArgsForCall(0)
 
 			Ω(*release.Draft).Should(Equal(false))
 		})
@@ -318,12 +318,12 @@ var _ = Describe("Out Command", func() {
 				request.Source.PreRelease = true
 			})
 
-			It("creates a non-draft pre-release in Github", func() {
+			It("creates a non-draft pre-release in gitlab", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-				release := githubClient.CreateReleaseArgsForCall(0)
+				Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+				release := gitlabClient.CreateReleaseArgsForCall(0)
 
 				Ω(*release.Name).Should(Equal("v0.3.12"))
 				Ω(*release.TagName).Should(Equal("0.3.12"))
@@ -354,12 +354,12 @@ var _ = Describe("Out Command", func() {
 				request.Source.PreRelease = true
 			})
 
-			It("creates a final release in Github", func() {
+			It("creates a final release in gitlab", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-				release := githubClient.CreateReleaseArgsForCall(0)
+				Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+				release := gitlabClient.CreateReleaseArgsForCall(0)
 
 				Ω(*release.Name).Should(Equal("v0.3.12"))
 				Ω(*release.TagName).Should(Equal("0.3.12"))
@@ -388,12 +388,12 @@ var _ = Describe("Out Command", func() {
 				request.Source.Drafts = true
 			})
 
-			It("creates a release on GitHub in draft mode", func() {
+			It("creates a release on gitlab in draft mode", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-				release := githubClient.CreateReleaseArgsForCall(0)
+				Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+				release := gitlabClient.CreateReleaseArgsForCall(0)
 
 				Ω(*release.Name).Should(Equal("v0.3.12"))
 				Ω(*release.TagName).Should(Equal("0.3.12"))
@@ -445,8 +445,8 @@ var _ = Describe("Out Command", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.UploadReleaseAssetCallCount()).Should(Equal(1))
-				release, name, file := githubClient.UploadReleaseAssetArgsForCall(0)
+				Ω(gitlabClient.UploadReleaseAssetCallCount()).Should(Equal(1))
+				release, name, file := gitlabClient.UploadReleaseAssetArgsForCall(0)
 
 				Ω(*release.ID).Should(Equal(112))
 				Ω(name).Should(Equal("great-file.tgz"))
@@ -479,23 +479,23 @@ var _ = Describe("Out Command", func() {
 			Context("when upload release asset fails", func() {
 				BeforeEach(func() {
 					existingAsset := false
-					githubClient.DeleteReleaseAssetStub = func(github.ReleaseAsset) error {
+					gitlabClient.DeleteReleaseAssetStub = func(gitlab.ReleaseAsset) error {
 						existingAsset = false
 						return nil
 					}
 
-					githubClient.ListReleaseAssetsReturns([]*github.ReleaseAsset{
+					gitlabClient.ListReleaseAssetsReturns([]*gitlab.ReleaseAsset{
 						{
-							ID:   github.Int(456789),
-							Name: github.String("great-file.tgz"),
+							ID:   gitlab.Int(456789),
+							Name: gitlab.String("great-file.tgz"),
 						},
 						{
-							ID:   github.Int(3450798),
-							Name: github.String("whatever.tgz"),
+							ID:   gitlab.Int(3450798),
+							Name: gitlab.String("whatever.tgz"),
 						},
 					}, nil)
 
-					githubClient.UploadReleaseAssetStub = func(rel github.RepositoryRelease, name string, file *os.File) error {
+					gitlabClient.UploadReleaseAssetStub = func(rel gitlab.Tag, name string, file *os.File) error {
 						Expect(ioutil.ReadAll(file)).To(Equal([]byte("matching")))
 						Expect(existingAsset).To(BeFalse())
 						existingAsset = true
@@ -507,17 +507,17 @@ var _ = Describe("Out Command", func() {
 					_, err := command.Run(sourcesDir, request)
 					Expect(err).To(Equal(errors.New("some-error")))
 
-					Ω(githubClient.UploadReleaseAssetCallCount()).Should(Equal(10))
-					Ω(githubClient.ListReleaseAssetsCallCount()).Should(Equal(10))
-					Ω(*githubClient.ListReleaseAssetsArgsForCall(9).ID).Should(Equal(112))
+					Ω(gitlabClient.UploadReleaseAssetCallCount()).Should(Equal(10))
+					Ω(gitlabClient.ListReleaseAssetsCallCount()).Should(Equal(10))
+					Ω(*gitlabClient.ListReleaseAssetsArgsForCall(9).ID).Should(Equal(112))
 
-					actualRelease, actualName, actualFile := githubClient.UploadReleaseAssetArgsForCall(9)
+					actualRelease, actualName, actualFile := gitlabClient.UploadReleaseAssetArgsForCall(9)
 					Ω(*actualRelease.ID).Should(Equal(112))
 					Ω(actualName).Should(Equal("great-file.tgz"))
 					Ω(actualFile.Name()).Should(Equal(filepath.Join(sourcesDir, "great-file.tgz")))
 
-					Ω(githubClient.DeleteReleaseAssetCallCount()).Should(Equal(10))
-					actualAsset := githubClient.DeleteReleaseAssetArgsForCall(8)
+					Ω(gitlabClient.DeleteReleaseAssetCallCount()).Should(Equal(10))
+					actualAsset := gitlabClient.DeleteReleaseAssetArgsForCall(8)
 					Expect(*actualAsset.ID).To(Equal(456789))
 				})
 
@@ -531,7 +531,7 @@ var _ = Describe("Out Command", func() {
 						results <- nil
 						results <- errors.New("6")
 
-						githubClient.UploadReleaseAssetStub = func(github.RepositoryRelease, string, *os.File) error {
+						gitlabClient.UploadReleaseAssetStub = func(gitlab.Tag, string, *os.File) error {
 							return <-results
 						}
 					})
@@ -540,17 +540,17 @@ var _ = Describe("Out Command", func() {
 						_, err := command.Run(sourcesDir, request)
 						Expect(err).ToNot(HaveOccurred())
 
-						Ω(githubClient.UploadReleaseAssetCallCount()).Should(Equal(5))
-						Ω(githubClient.ListReleaseAssetsCallCount()).Should(Equal(4))
-						Ω(*githubClient.ListReleaseAssetsArgsForCall(3).ID).Should(Equal(112))
+						Ω(gitlabClient.UploadReleaseAssetCallCount()).Should(Equal(5))
+						Ω(gitlabClient.ListReleaseAssetsCallCount()).Should(Equal(4))
+						Ω(*gitlabClient.ListReleaseAssetsArgsForCall(3).ID).Should(Equal(112))
 
-						actualRelease, actualName, actualFile := githubClient.UploadReleaseAssetArgsForCall(4)
+						actualRelease, actualName, actualFile := gitlabClient.UploadReleaseAssetArgsForCall(4)
 						Ω(*actualRelease.ID).Should(Equal(112))
 						Ω(actualName).Should(Equal("great-file.tgz"))
 						Ω(actualFile.Name()).Should(Equal(filepath.Join(sourcesDir, "great-file.tgz")))
 
-						Ω(githubClient.DeleteReleaseAssetCallCount()).Should(Equal(4))
-						actualAsset := githubClient.DeleteReleaseAssetArgsForCall(3)
+						Ω(gitlabClient.DeleteReleaseAssetCallCount()).Should(Equal(4))
+						actualAsset := gitlabClient.DeleteReleaseAssetArgsForCall(3)
 						Expect(*actualAsset.ID).To(Equal(456789))
 					})
 				})
@@ -578,8 +578,8 @@ var _ = Describe("Out Command", func() {
 				_, err := command.Run(sourcesDir, request)
 				Ω(err).ShouldNot(HaveOccurred())
 
-				Ω(githubClient.CreateReleaseCallCount()).Should(Equal(1))
-				release := githubClient.CreateReleaseArgsForCall(0)
+				Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
+				release := gitlabClient.CreateReleaseArgsForCall(0)
 
 				Ω(*release.Name).Should(Equal("v0.3.12"))
 				Ω(*release.TagName).Should(Equal("version-0.3.12"))
