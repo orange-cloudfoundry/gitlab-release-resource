@@ -14,7 +14,7 @@ func metadataFromTag(tag *gitlab.Tag) []MetadataPair {
 		metadata = append(metadata, nameMeta)
 	}
 
-	if tag.Release.Description != "" {
+	if tag.Release != nil && tag.Release.Description != "" {
 		metadata = append(metadata, MetadataPair{
 			Name:     "body",
 			Value:    tag.Release.Description,
@@ -22,7 +22,7 @@ func metadataFromTag(tag *gitlab.Tag) []MetadataPair {
 		})
 	}
 
-	if tag.Commit.ID != "" {
+	if tag.Commit != nil && tag.Commit.ID != "" {
 		metadata = append(metadata, MetadataPair{
 			Name:  "commit_sha",
 			Value: tag.Commit.ID,
