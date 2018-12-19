@@ -85,13 +85,13 @@ func (g *GitlabClient) ListTags() ([]*gitlab.Tag, error) {
 			return []*gitlab.Tag{}, err
 		}
 
+		allTags = append(allTags, tags...)
+
 		if opt.Page >= res.TotalPages {
 			break
 		}
 
 		opt.Page = res.NextPage
-
-		allTags = append(allTags, tags...)
 	}
 
 	return allTags, nil
@@ -115,10 +115,6 @@ func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 			return []*gitlab.Tag{}, err
 		}
 
-		if opt.Page >= res.TotalPages {
-			break
-		}
-
 		foundTag := false
 		for i, tag := range tags {
 			if tag.Name == tag_name {
@@ -130,9 +126,13 @@ func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 		if foundTag {
 			break
 		}
+		allTags = append(allTags, tags...)
+
+		if opt.Page >= res.TotalPages {
+			break
+		}
 
 		opt.Page = res.NextPage
-		allTags = append(allTags, tags...)
 	}
 
 	return allTags, nil
