@@ -100,32 +100,61 @@ func (g *GitlabClient) ListTags() ([]*gitlab.Tag, error) {
 func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 	var allTags []*gitlab.Tag
 
+	pageSize := 100
+
 	opt := &gitlab.ListTagsOptions{
 		ListOptions: gitlab.ListOptions{
-			PerPage: 100,
+			PerPage: pageSize,
 			Page:    1,
 		},
 		OrderBy: gitlab.String("updated"),
 		Sort:    gitlab.String("desc"),
 	}
 
+	var foundTag *gitlab.Tag
 	for {
 		tags, res, err := g.client.Tags.ListTags(g.repository, opt)
 		if err != nil {
 			return []*gitlab.Tag{}, err
 		}
 
-		foundTag := false
+		skipToNextPage := false
 		for i, tag := range tags {
+			// Some tags might have the same date - if they all have the same date, take
+			// all of them
+			if foundTag != nil {
+				if foundTag.Commit.CommittedDate.Equal(*tag.Commit.CommittedDate) {
+					allTags = append(allTags, tag)
+					if i == (pageSize - 1) {
+						skipToNextPage = true
+						break
+					} else {
+						continue
+					}
+				} else {
+					break
+				}
+			}
+
 			if tag.Name == tag_name {
 				allTags = append(allTags, tags[:i+1]...)
-				foundTag = true
-				break
+				foundTag = tag
+				continue
 			}
 		}
-		if foundTag {
+		if skipToNextPage {
+			if opt.Page >= res.TotalPages {
+				break
+			}
+
+			opt.Page = res.NextPage
+			continue
+		}
+
+		if foundTag != nil {
 			break
 		}
+
 		allTags = append(allTags, tags...)
 
 		if opt.Page >= res.TotalPages {
