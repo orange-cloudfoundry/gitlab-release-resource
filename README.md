@@ -98,7 +98,7 @@ matching the patterns in `globs` to the release.
 
 #### Parameters
 
-* `commitish`: *Required.* A path to a file containing the commitish (SHA, tag,
+* `commitish`: *Optional, if tag is not specified.* A path to a file containing the commitish (SHA, tag,
   branch name) that the new tag and release should be associated with.
 
 * `tag`: *Required.* A path to a file containing the name of the Git tag to use
