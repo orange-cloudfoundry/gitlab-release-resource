@@ -36,11 +36,6 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 
 	tag_name = request.Params.TagPrefix + tag_name
 
-	targetCommitish, err := c.fileContents(filepath.Join(sourceDir, request.Params.CommitishPath))
-	if err != nil {
-		return OutResponse{}, err
-	}
-
 	// if request.Params.BodyPath != "" {
 	// 	_, err := c.fileContents(filepath.Join(sourceDir, request.Params.BodyPath))
 	// 	if err != nil {
@@ -57,6 +52,10 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 
 	// create the tag first, as next sections assume the tag exists
 	if !tagExists {
+		targetCommitish, err := c.fileContents(filepath.Join(sourceDir, request.Params.CommitishPath))
+		if err != nil {
+			return OutResponse{}, err
+		}
 		tag, err = c.gitlab.CreateTag(targetCommitish, tag_name)
 		if err != nil {
 			return OutResponse{}, err
