@@ -14,11 +14,11 @@ You may want to clean up your uploads folder over time if you re-run a put step 
    during an `in` and pushing a release to a repo during an `out`. The access
    token you create is only required to have the `repo` or `public_repo` scope.
 
-* `gitlab_api_url`: *Optional.* If you use a non-public GitHub deployment then
+* `gitlab_api_url`: *Optional.* If you use a non-public GitLab deployment then
   you can set your API URL here.
 
 * `insecure`: *Optional. Default `false`.* When set to `true`, concourse will allow
-  insecure connection to your github API.
+  insecure connection to your gitlab API.
 
 * `tag_filter`: *Optional.* If set, override default tag filter regular
   expression of `v?([^v].*)`. If the filter includes a capture group, the capture
@@ -51,15 +51,15 @@ You may want to clean up your uploads folder over time if you re-run a put step 
 To get a specific version of a release:
 
 ``` yaml
-- get: gh-release
+- get: gl-release
   version: { tag: 'v0.0.1' }
 ```
 
 To set a custom tag filter:
 
 ```yaml
-- name: gh-release
-  type: github-release
+- name: gl-release
+  type: gitlab-release
   source:
     owner: concourse
     repository: concourse
@@ -132,7 +132,7 @@ will stop the build.
 Run the tests with the following command:
 
 ```sh
-docker build -t github-release-resource .
+docker build -t gitlab-release-resource .
 ```
 
 ### Contributing
