@@ -19,11 +19,16 @@ var _ = Describe("GitLab Client", func() {
 
 	BeforeEach(func() {
 		server = ghttp.NewServer()
+		server.AppendHandlers(
+			ghttp.CombineHandlers(
+				ghttp.VerifyRequest("GET", "/api/v4/"),
+				ghttp.RespondWith(200, "[]"),
+			),
+		)
 	})
 
 	JustBeforeEach(func() {
 		source.GitLabAPIURL = server.URL()
-
 		var err error
 		client, err = NewGitLabClient(source)
 		Ω(err).ShouldNot(HaveOccurred())
@@ -37,10 +42,8 @@ var _ = Describe("GitLab Client", func() {
 		BeforeEach(func() {
 			source.AccessToken = "hello?"
 		})
-
 		It("returns an error if the API URL is bad", func() {
 			source.GitLabAPIURL = ":"
-
 			_, err := NewGitLabClient(source)
 			Ω(err).Should(HaveOccurred())
 		})
@@ -55,9 +58,9 @@ var _ = Describe("GitLab Client", func() {
 
 			server.AppendHandlers(
 				ghttp.CombineHandlers(
-					ghttp.VerifyRequest("GET", "/repos/concourse/concourse/releases"),
+					ghttp.VerifyRequest("GET", "/api/v4/projects/concourse/repository/tags"),
 					ghttp.RespondWith(200, "[]"),
-					ghttp.VerifyHeaderKV("Authorization", "Bearer abc123"),
+					ghttp.VerifyHeaderKV("Private-Token", "abc123"),
 				),
 			)
 		})
@@ -73,10 +76,9 @@ var _ = Describe("GitLab Client", func() {
 			source = Source{
 				Repository: "concourse",
 			}
-
 			server.AppendHandlers(
 				ghttp.CombineHandlers(
-					ghttp.VerifyRequest("GET", "/repos/concourse/concourse/releases"),
+					ghttp.VerifyRequest("GET", "/api/v4/projects/concourse/repository/tags"),
 					ghttp.RespondWith(200, "[]"),
 					ghttp.VerifyHeader(http.Header{"Authorization": nil}),
 				),
@@ -89,15 +91,8 @@ var _ = Describe("GitLab Client", func() {
 		})
 	})
 
-	Describe("GetRelease", func() {
-		BeforeEach(func() {
-			source = Source{
-				Repository: "concourse",
-			}
-		})
-	})
 
-	Describe("GetReleaseByTag", func() {
+	Describe("GetTag", func() {
 		BeforeEach(func() {
 			source = Source{
 				Repository: "concourse",
@@ -108,21 +103,62 @@ var _ = Describe("GitLab Client", func() {
 			BeforeEach(func() {
 				server.AppendHandlers(
 					ghttp.CombineHandlers(
-						ghttp.VerifyRequest("GET", "/repos/concourse/concourse/releases/tags/some-tag"),
-						ghttp.RespondWith(200, `{ "id": "1" }`),
+						ghttp.VerifyRequest("GET", "/api/v4/projects/concourse/repository/tags/some-tag"),
+						ghttp.RespondWith(200, `{ "Name": "some-tag" }`),
 					),
 				)
 			})
 
 			It("Returns a populated github.Tag", func() {
-				expectedRelease := &gitlab.Tag{
-					Name: *gitlab.String("1"),
+				expectedTag := &gitlab.Tag{
+					Name: *gitlab.String("some-tag"),
 				}
+				tag, err := client.GetTag("some-tag")
+				Ω(err).ShouldNot(HaveOccurred())
+				Expect(tag).To(Equal(expectedTag))
+			})
+		})
+	})
 
-				release, err := client.GetTag("some-tag")
+	Describe("GetRelease", func() {
+		BeforeEach(func() {
+			source = Source{
+				Repository: "concourse",
+			}
+		})
 
+		Context("When GitLab responds successfully", func() {
+			BeforeEach(func() {
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/api/v4/projects/concourse/releases/some-tag"),
+						ghttp.RespondWith(200, `{ "tag_name": "some-tag" }`),
+					),
+				)
+			})
+
+			It("Returns a populated github.Release", func() {
+				expectedRelease := &gitlab.Release{
+					TagName: "some-tag",
+				}
+				release, err := client.GetRelease("some-tag")
 				Ω(err).ShouldNot(HaveOccurred())
 				Expect(release).To(Equal(expectedRelease))
+			})
+		})
+		Context("When GitLab responds forbidden", func() {
+			BeforeEach(func() {
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/api/v4/projects/concourse/releases/some-tag"),
+						ghttp.RespondWith(403, ``),
+					),
+				)
+			})
+
+			It("Returns an error", func() {
+				_, err := client.GetRelease("some-tag")
+				Ω(err).Should(HaveOccurred())
 			})
 		})
 	})

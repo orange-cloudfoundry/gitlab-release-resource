@@ -2,18 +2,19 @@
 package fakes
 
 import (
-	sync "sync"
+	"sync"
 
 	resource "github.com/edtan/gitlab-release-resource"
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
 type FakeGitLab struct {
-	CreateReleaseStub        func(string, string) (*gitlab.Release, error)
+	CreateReleaseStub        func(string, string, *string) (*gitlab.Release, error)
 	createReleaseMutex       sync.RWMutex
 	createReleaseArgsForCall []struct {
 		arg1 string
 		arg2 string
+		arg3 *string
 	}
 	createReleaseReturns struct {
 		result1 *gitlab.Release
@@ -21,6 +22,21 @@ type FakeGitLab struct {
 	}
 	createReleaseReturnsOnCall map[int]struct {
 		result1 *gitlab.Release
+		result2 error
+	}
+	CreateReleaseLinkStub        func(string, string, string) (*gitlab.ReleaseLink, error)
+	createReleaseLinkMutex       sync.RWMutex
+	createReleaseLinkArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}
+	createReleaseLinkReturns struct {
+		result1 *gitlab.ReleaseLink
+		result2 error
+	}
+	createReleaseLinkReturnsOnCall map[int]struct {
+		result1 *gitlab.ReleaseLink
 		result2 error
 	}
 	CreateTagStub        func(string, string) (*gitlab.Tag, error)
@@ -37,6 +53,18 @@ type FakeGitLab struct {
 		result1 *gitlab.Tag
 		result2 error
 	}
+	DeleteReleaseLinkStub        func(string, *gitlab.ReleaseLink) error
+	deleteReleaseLinkMutex       sync.RWMutex
+	deleteReleaseLinkArgsForCall []struct {
+		arg1 string
+		arg2 *gitlab.ReleaseLink
+	}
+	deleteReleaseLinkReturns struct {
+		result1 error
+	}
+	deleteReleaseLinkReturnsOnCall map[int]struct {
+		result1 error
+	}
 	DownloadProjectFileStub        func(string, string) error
 	downloadProjectFileMutex       sync.RWMutex
 	downloadProjectFileArgsForCall []struct {
@@ -49,6 +77,32 @@ type FakeGitLab struct {
 	downloadProjectFileReturnsOnCall map[int]struct {
 		result1 error
 	}
+	GetReleaseStub        func(string) (*gitlab.Release, error)
+	getReleaseMutex       sync.RWMutex
+	getReleaseArgsForCall []struct {
+		arg1 string
+	}
+	getReleaseReturns struct {
+		result1 *gitlab.Release
+		result2 error
+	}
+	getReleaseReturnsOnCall map[int]struct {
+		result1 *gitlab.Release
+		result2 error
+	}
+	GetReleaseLinksStub        func(string) ([]*gitlab.ReleaseLink, error)
+	getReleaseLinksMutex       sync.RWMutex
+	getReleaseLinksArgsForCall []struct {
+		arg1 string
+	}
+	getReleaseLinksReturns struct {
+		result1 []*gitlab.ReleaseLink
+		result2 error
+	}
+	getReleaseLinksReturnsOnCall map[int]struct {
+		result1 []*gitlab.ReleaseLink
+		result2 error
+	}
 	GetTagStub        func(string) (*gitlab.Tag, error)
 	getTagMutex       sync.RWMutex
 	getTagArgsForCall []struct {
@@ -60,6 +114,18 @@ type FakeGitLab struct {
 	}
 	getTagReturnsOnCall map[int]struct {
 		result1 *gitlab.Tag
+		result2 error
+	}
+	ListReleasesStub        func() ([]*gitlab.Release, error)
+	listReleasesMutex       sync.RWMutex
+	listReleasesArgsForCall []struct {
+	}
+	listReleasesReturns struct {
+		result1 []*gitlab.Release
+		result2 error
+	}
+	listReleasesReturnsOnCall map[int]struct {
+		result1 []*gitlab.Release
 		result2 error
 	}
 	ListTagsStub        func() ([]*gitlab.Tag, error)
@@ -87,11 +153,12 @@ type FakeGitLab struct {
 		result1 []*gitlab.Tag
 		result2 error
 	}
-	UpdateReleaseStub        func(string, string) (*gitlab.Release, error)
+	UpdateReleaseStub        func(string, string, *string) (*gitlab.Release, error)
 	updateReleaseMutex       sync.RWMutex
 	updateReleaseArgsForCall []struct {
 		arg1 string
 		arg2 string
+		arg3 *string
 	}
 	updateReleaseReturns struct {
 		result1 *gitlab.Release
@@ -118,22 +185,24 @@ type FakeGitLab struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGitLab) CreateRelease(arg1 string, arg2 string) (*gitlab.Release, error) {
+func (fake *FakeGitLab) CreateRelease(arg1 string, arg2 string, arg3 *string) (*gitlab.Release, error) {
 	fake.createReleaseMutex.Lock()
 	ret, specificReturn := fake.createReleaseReturnsOnCall[len(fake.createReleaseArgsForCall)]
 	fake.createReleaseArgsForCall = append(fake.createReleaseArgsForCall, struct {
 		arg1 string
 		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("CreateRelease", []interface{}{arg1, arg2})
+		arg3 *string
+	}{arg1, arg2, arg3})
+	stub := fake.CreateReleaseStub
+	fakeReturns := fake.createReleaseReturns
+	fake.recordInvocation("CreateRelease", []interface{}{arg1, arg2, arg3})
 	fake.createReleaseMutex.Unlock()
-	if fake.CreateReleaseStub != nil {
-		return fake.CreateReleaseStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createReleaseReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -143,17 +212,17 @@ func (fake *FakeGitLab) CreateReleaseCallCount() int {
 	return len(fake.createReleaseArgsForCall)
 }
 
-func (fake *FakeGitLab) CreateReleaseCalls(stub func(string, string) (*gitlab.Release, error)) {
+func (fake *FakeGitLab) CreateReleaseCalls(stub func(string, string, *string) (*gitlab.Release, error)) {
 	fake.createReleaseMutex.Lock()
 	defer fake.createReleaseMutex.Unlock()
 	fake.CreateReleaseStub = stub
 }
 
-func (fake *FakeGitLab) CreateReleaseArgsForCall(i int) (string, string) {
+func (fake *FakeGitLab) CreateReleaseArgsForCall(i int) (string, string, *string) {
 	fake.createReleaseMutex.RLock()
 	defer fake.createReleaseMutex.RUnlock()
 	argsForCall := fake.createReleaseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeGitLab) CreateReleaseReturns(result1 *gitlab.Release, result2 error) {
@@ -182,6 +251,72 @@ func (fake *FakeGitLab) CreateReleaseReturnsOnCall(i int, result1 *gitlab.Releas
 	}{result1, result2}
 }
 
+func (fake *FakeGitLab) CreateReleaseLink(arg1 string, arg2 string, arg3 string) (*gitlab.ReleaseLink, error) {
+	fake.createReleaseLinkMutex.Lock()
+	ret, specificReturn := fake.createReleaseLinkReturnsOnCall[len(fake.createReleaseLinkArgsForCall)]
+	fake.createReleaseLinkArgsForCall = append(fake.createReleaseLinkArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.CreateReleaseLinkStub
+	fakeReturns := fake.createReleaseLinkReturns
+	fake.recordInvocation("CreateReleaseLink", []interface{}{arg1, arg2, arg3})
+	fake.createReleaseLinkMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeGitLab) CreateReleaseLinkCallCount() int {
+	fake.createReleaseLinkMutex.RLock()
+	defer fake.createReleaseLinkMutex.RUnlock()
+	return len(fake.createReleaseLinkArgsForCall)
+}
+
+func (fake *FakeGitLab) CreateReleaseLinkCalls(stub func(string, string, string) (*gitlab.ReleaseLink, error)) {
+	fake.createReleaseLinkMutex.Lock()
+	defer fake.createReleaseLinkMutex.Unlock()
+	fake.CreateReleaseLinkStub = stub
+}
+
+func (fake *FakeGitLab) CreateReleaseLinkArgsForCall(i int) (string, string, string) {
+	fake.createReleaseLinkMutex.RLock()
+	defer fake.createReleaseLinkMutex.RUnlock()
+	argsForCall := fake.createReleaseLinkArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeGitLab) CreateReleaseLinkReturns(result1 *gitlab.ReleaseLink, result2 error) {
+	fake.createReleaseLinkMutex.Lock()
+	defer fake.createReleaseLinkMutex.Unlock()
+	fake.CreateReleaseLinkStub = nil
+	fake.createReleaseLinkReturns = struct {
+		result1 *gitlab.ReleaseLink
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeGitLab) CreateReleaseLinkReturnsOnCall(i int, result1 *gitlab.ReleaseLink, result2 error) {
+	fake.createReleaseLinkMutex.Lock()
+	defer fake.createReleaseLinkMutex.Unlock()
+	fake.CreateReleaseLinkStub = nil
+	if fake.createReleaseLinkReturnsOnCall == nil {
+		fake.createReleaseLinkReturnsOnCall = make(map[int]struct {
+			result1 *gitlab.ReleaseLink
+			result2 error
+		})
+	}
+	fake.createReleaseLinkReturnsOnCall[i] = struct {
+		result1 *gitlab.ReleaseLink
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeGitLab) CreateTag(arg1 string, arg2 string) (*gitlab.Tag, error) {
 	fake.createTagMutex.Lock()
 	ret, specificReturn := fake.createTagReturnsOnCall[len(fake.createTagArgsForCall)]
@@ -189,15 +324,16 @@ func (fake *FakeGitLab) CreateTag(arg1 string, arg2 string) (*gitlab.Tag, error)
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.CreateTagStub
+	fakeReturns := fake.createTagReturns
 	fake.recordInvocation("CreateTag", []interface{}{arg1, arg2})
 	fake.createTagMutex.Unlock()
-	if fake.CreateTagStub != nil {
-		return fake.CreateTagStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createTagReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -246,6 +382,68 @@ func (fake *FakeGitLab) CreateTagReturnsOnCall(i int, result1 *gitlab.Tag, resul
 	}{result1, result2}
 }
 
+func (fake *FakeGitLab) DeleteReleaseLink(arg1 string, arg2 *gitlab.ReleaseLink) error {
+	fake.deleteReleaseLinkMutex.Lock()
+	ret, specificReturn := fake.deleteReleaseLinkReturnsOnCall[len(fake.deleteReleaseLinkArgsForCall)]
+	fake.deleteReleaseLinkArgsForCall = append(fake.deleteReleaseLinkArgsForCall, struct {
+		arg1 string
+		arg2 *gitlab.ReleaseLink
+	}{arg1, arg2})
+	stub := fake.DeleteReleaseLinkStub
+	fakeReturns := fake.deleteReleaseLinkReturns
+	fake.recordInvocation("DeleteReleaseLink", []interface{}{arg1, arg2})
+	fake.deleteReleaseLinkMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGitLab) DeleteReleaseLinkCallCount() int {
+	fake.deleteReleaseLinkMutex.RLock()
+	defer fake.deleteReleaseLinkMutex.RUnlock()
+	return len(fake.deleteReleaseLinkArgsForCall)
+}
+
+func (fake *FakeGitLab) DeleteReleaseLinkCalls(stub func(string, *gitlab.ReleaseLink) error) {
+	fake.deleteReleaseLinkMutex.Lock()
+	defer fake.deleteReleaseLinkMutex.Unlock()
+	fake.DeleteReleaseLinkStub = stub
+}
+
+func (fake *FakeGitLab) DeleteReleaseLinkArgsForCall(i int) (string, *gitlab.ReleaseLink) {
+	fake.deleteReleaseLinkMutex.RLock()
+	defer fake.deleteReleaseLinkMutex.RUnlock()
+	argsForCall := fake.deleteReleaseLinkArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeGitLab) DeleteReleaseLinkReturns(result1 error) {
+	fake.deleteReleaseLinkMutex.Lock()
+	defer fake.deleteReleaseLinkMutex.Unlock()
+	fake.DeleteReleaseLinkStub = nil
+	fake.deleteReleaseLinkReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGitLab) DeleteReleaseLinkReturnsOnCall(i int, result1 error) {
+	fake.deleteReleaseLinkMutex.Lock()
+	defer fake.deleteReleaseLinkMutex.Unlock()
+	fake.DeleteReleaseLinkStub = nil
+	if fake.deleteReleaseLinkReturnsOnCall == nil {
+		fake.deleteReleaseLinkReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteReleaseLinkReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeGitLab) DownloadProjectFile(arg1 string, arg2 string) error {
 	fake.downloadProjectFileMutex.Lock()
 	ret, specificReturn := fake.downloadProjectFileReturnsOnCall[len(fake.downloadProjectFileArgsForCall)]
@@ -253,15 +451,16 @@ func (fake *FakeGitLab) DownloadProjectFile(arg1 string, arg2 string) error {
 		arg1 string
 		arg2 string
 	}{arg1, arg2})
+	stub := fake.DownloadProjectFileStub
+	fakeReturns := fake.downloadProjectFileReturns
 	fake.recordInvocation("DownloadProjectFile", []interface{}{arg1, arg2})
 	fake.downloadProjectFileMutex.Unlock()
-	if fake.DownloadProjectFileStub != nil {
-		return fake.DownloadProjectFileStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.downloadProjectFileReturns
 	return fakeReturns.result1
 }
 
@@ -307,21 +506,150 @@ func (fake *FakeGitLab) DownloadProjectFileReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeGitLab) GetRelease(arg1 string) (*gitlab.Release, error) {
+	fake.getReleaseMutex.Lock()
+	ret, specificReturn := fake.getReleaseReturnsOnCall[len(fake.getReleaseArgsForCall)]
+	fake.getReleaseArgsForCall = append(fake.getReleaseArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetReleaseStub
+	fakeReturns := fake.getReleaseReturns
+	fake.recordInvocation("GetRelease", []interface{}{arg1})
+	fake.getReleaseMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeGitLab) GetReleaseCallCount() int {
+	fake.getReleaseMutex.RLock()
+	defer fake.getReleaseMutex.RUnlock()
+	return len(fake.getReleaseArgsForCall)
+}
+
+func (fake *FakeGitLab) GetReleaseCalls(stub func(string) (*gitlab.Release, error)) {
+	fake.getReleaseMutex.Lock()
+	defer fake.getReleaseMutex.Unlock()
+	fake.GetReleaseStub = stub
+}
+
+func (fake *FakeGitLab) GetReleaseArgsForCall(i int) string {
+	fake.getReleaseMutex.RLock()
+	defer fake.getReleaseMutex.RUnlock()
+	argsForCall := fake.getReleaseArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGitLab) GetReleaseReturns(result1 *gitlab.Release, result2 error) {
+	fake.getReleaseMutex.Lock()
+	defer fake.getReleaseMutex.Unlock()
+	fake.GetReleaseStub = nil
+	fake.getReleaseReturns = struct {
+		result1 *gitlab.Release
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeGitLab) GetReleaseReturnsOnCall(i int, result1 *gitlab.Release, result2 error) {
+	fake.getReleaseMutex.Lock()
+	defer fake.getReleaseMutex.Unlock()
+	fake.GetReleaseStub = nil
+	if fake.getReleaseReturnsOnCall == nil {
+		fake.getReleaseReturnsOnCall = make(map[int]struct {
+			result1 *gitlab.Release
+			result2 error
+		})
+	}
+	fake.getReleaseReturnsOnCall[i] = struct {
+		result1 *gitlab.Release
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeGitLab) GetReleaseLinks(arg1 string) ([]*gitlab.ReleaseLink, error) {
+	fake.getReleaseLinksMutex.Lock()
+	ret, specificReturn := fake.getReleaseLinksReturnsOnCall[len(fake.getReleaseLinksArgsForCall)]
+	fake.getReleaseLinksArgsForCall = append(fake.getReleaseLinksArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetReleaseLinksStub
+	fakeReturns := fake.getReleaseLinksReturns
+	fake.recordInvocation("GetReleaseLinks", []interface{}{arg1})
+	fake.getReleaseLinksMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeGitLab) GetReleaseLinksCallCount() int {
+	fake.getReleaseLinksMutex.RLock()
+	defer fake.getReleaseLinksMutex.RUnlock()
+	return len(fake.getReleaseLinksArgsForCall)
+}
+
+func (fake *FakeGitLab) GetReleaseLinksCalls(stub func(string) ([]*gitlab.ReleaseLink, error)) {
+	fake.getReleaseLinksMutex.Lock()
+	defer fake.getReleaseLinksMutex.Unlock()
+	fake.GetReleaseLinksStub = stub
+}
+
+func (fake *FakeGitLab) GetReleaseLinksArgsForCall(i int) string {
+	fake.getReleaseLinksMutex.RLock()
+	defer fake.getReleaseLinksMutex.RUnlock()
+	argsForCall := fake.getReleaseLinksArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGitLab) GetReleaseLinksReturns(result1 []*gitlab.ReleaseLink, result2 error) {
+	fake.getReleaseLinksMutex.Lock()
+	defer fake.getReleaseLinksMutex.Unlock()
+	fake.GetReleaseLinksStub = nil
+	fake.getReleaseLinksReturns = struct {
+		result1 []*gitlab.ReleaseLink
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeGitLab) GetReleaseLinksReturnsOnCall(i int, result1 []*gitlab.ReleaseLink, result2 error) {
+	fake.getReleaseLinksMutex.Lock()
+	defer fake.getReleaseLinksMutex.Unlock()
+	fake.GetReleaseLinksStub = nil
+	if fake.getReleaseLinksReturnsOnCall == nil {
+		fake.getReleaseLinksReturnsOnCall = make(map[int]struct {
+			result1 []*gitlab.ReleaseLink
+			result2 error
+		})
+	}
+	fake.getReleaseLinksReturnsOnCall[i] = struct {
+		result1 []*gitlab.ReleaseLink
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeGitLab) GetTag(arg1 string) (*gitlab.Tag, error) {
 	fake.getTagMutex.Lock()
 	ret, specificReturn := fake.getTagReturnsOnCall[len(fake.getTagArgsForCall)]
 	fake.getTagArgsForCall = append(fake.getTagArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.GetTagStub
+	fakeReturns := fake.getTagReturns
 	fake.recordInvocation("GetTag", []interface{}{arg1})
 	fake.getTagMutex.Unlock()
-	if fake.GetTagStub != nil {
-		return fake.GetTagStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.getTagReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -370,20 +698,77 @@ func (fake *FakeGitLab) GetTagReturnsOnCall(i int, result1 *gitlab.Tag, result2 
 	}{result1, result2}
 }
 
+func (fake *FakeGitLab) ListReleases() ([]*gitlab.Release, error) {
+	fake.listReleasesMutex.Lock()
+	ret, specificReturn := fake.listReleasesReturnsOnCall[len(fake.listReleasesArgsForCall)]
+	fake.listReleasesArgsForCall = append(fake.listReleasesArgsForCall, struct {
+	}{})
+	stub := fake.ListReleasesStub
+	fakeReturns := fake.listReleasesReturns
+	fake.recordInvocation("ListReleases", []interface{}{})
+	fake.listReleasesMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeGitLab) ListReleasesCallCount() int {
+	fake.listReleasesMutex.RLock()
+	defer fake.listReleasesMutex.RUnlock()
+	return len(fake.listReleasesArgsForCall)
+}
+
+func (fake *FakeGitLab) ListReleasesCalls(stub func() ([]*gitlab.Release, error)) {
+	fake.listReleasesMutex.Lock()
+	defer fake.listReleasesMutex.Unlock()
+	fake.ListReleasesStub = stub
+}
+
+func (fake *FakeGitLab) ListReleasesReturns(result1 []*gitlab.Release, result2 error) {
+	fake.listReleasesMutex.Lock()
+	defer fake.listReleasesMutex.Unlock()
+	fake.ListReleasesStub = nil
+	fake.listReleasesReturns = struct {
+		result1 []*gitlab.Release
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeGitLab) ListReleasesReturnsOnCall(i int, result1 []*gitlab.Release, result2 error) {
+	fake.listReleasesMutex.Lock()
+	defer fake.listReleasesMutex.Unlock()
+	fake.ListReleasesStub = nil
+	if fake.listReleasesReturnsOnCall == nil {
+		fake.listReleasesReturnsOnCall = make(map[int]struct {
+			result1 []*gitlab.Release
+			result2 error
+		})
+	}
+	fake.listReleasesReturnsOnCall[i] = struct {
+		result1 []*gitlab.Release
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeGitLab) ListTags() ([]*gitlab.Tag, error) {
 	fake.listTagsMutex.Lock()
 	ret, specificReturn := fake.listTagsReturnsOnCall[len(fake.listTagsArgsForCall)]
 	fake.listTagsArgsForCall = append(fake.listTagsArgsForCall, struct {
 	}{})
+	stub := fake.ListTagsStub
+	fakeReturns := fake.listTagsReturns
 	fake.recordInvocation("ListTags", []interface{}{})
 	fake.listTagsMutex.Unlock()
-	if fake.ListTagsStub != nil {
-		return fake.ListTagsStub()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.listTagsReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -431,15 +816,16 @@ func (fake *FakeGitLab) ListTagsUntil(arg1 string) ([]*gitlab.Tag, error) {
 	fake.listTagsUntilArgsForCall = append(fake.listTagsUntilArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.ListTagsUntilStub
+	fakeReturns := fake.listTagsUntilReturns
 	fake.recordInvocation("ListTagsUntil", []interface{}{arg1})
 	fake.listTagsUntilMutex.Unlock()
-	if fake.ListTagsUntilStub != nil {
-		return fake.ListTagsUntilStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.listTagsUntilReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -488,22 +874,24 @@ func (fake *FakeGitLab) ListTagsUntilReturnsOnCall(i int, result1 []*gitlab.Tag,
 	}{result1, result2}
 }
 
-func (fake *FakeGitLab) UpdateRelease(arg1 string, arg2 string) (*gitlab.Release, error) {
+func (fake *FakeGitLab) UpdateRelease(arg1 string, arg2 string, arg3 *string) (*gitlab.Release, error) {
 	fake.updateReleaseMutex.Lock()
 	ret, specificReturn := fake.updateReleaseReturnsOnCall[len(fake.updateReleaseArgsForCall)]
 	fake.updateReleaseArgsForCall = append(fake.updateReleaseArgsForCall, struct {
 		arg1 string
 		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("UpdateRelease", []interface{}{arg1, arg2})
+		arg3 *string
+	}{arg1, arg2, arg3})
+	stub := fake.UpdateReleaseStub
+	fakeReturns := fake.updateReleaseReturns
+	fake.recordInvocation("UpdateRelease", []interface{}{arg1, arg2, arg3})
 	fake.updateReleaseMutex.Unlock()
-	if fake.UpdateReleaseStub != nil {
-		return fake.UpdateReleaseStub(arg1, arg2)
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.updateReleaseReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -513,17 +901,17 @@ func (fake *FakeGitLab) UpdateReleaseCallCount() int {
 	return len(fake.updateReleaseArgsForCall)
 }
 
-func (fake *FakeGitLab) UpdateReleaseCalls(stub func(string, string) (*gitlab.Release, error)) {
+func (fake *FakeGitLab) UpdateReleaseCalls(stub func(string, string, *string) (*gitlab.Release, error)) {
 	fake.updateReleaseMutex.Lock()
 	defer fake.updateReleaseMutex.Unlock()
 	fake.UpdateReleaseStub = stub
 }
 
-func (fake *FakeGitLab) UpdateReleaseArgsForCall(i int) (string, string) {
+func (fake *FakeGitLab) UpdateReleaseArgsForCall(i int) (string, string, *string) {
 	fake.updateReleaseMutex.RLock()
 	defer fake.updateReleaseMutex.RUnlock()
 	argsForCall := fake.updateReleaseArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeGitLab) UpdateReleaseReturns(result1 *gitlab.Release, result2 error) {
@@ -558,15 +946,16 @@ func (fake *FakeGitLab) UploadProjectFile(arg1 string) (*gitlab.ProjectFile, err
 	fake.uploadProjectFileArgsForCall = append(fake.uploadProjectFileArgsForCall, struct {
 		arg1 string
 	}{arg1})
+	stub := fake.UploadProjectFileStub
+	fakeReturns := fake.uploadProjectFileReturns
 	fake.recordInvocation("UploadProjectFile", []interface{}{arg1})
 	fake.uploadProjectFileMutex.Unlock()
-	if fake.UploadProjectFileStub != nil {
-		return fake.UploadProjectFileStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.uploadProjectFileReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
@@ -620,12 +1009,22 @@ func (fake *FakeGitLab) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createReleaseMutex.RLock()
 	defer fake.createReleaseMutex.RUnlock()
+	fake.createReleaseLinkMutex.RLock()
+	defer fake.createReleaseLinkMutex.RUnlock()
 	fake.createTagMutex.RLock()
 	defer fake.createTagMutex.RUnlock()
+	fake.deleteReleaseLinkMutex.RLock()
+	defer fake.deleteReleaseLinkMutex.RUnlock()
 	fake.downloadProjectFileMutex.RLock()
 	defer fake.downloadProjectFileMutex.RUnlock()
+	fake.getReleaseMutex.RLock()
+	defer fake.getReleaseMutex.RUnlock()
+	fake.getReleaseLinksMutex.RLock()
+	defer fake.getReleaseLinksMutex.RUnlock()
 	fake.getTagMutex.RLock()
 	defer fake.getTagMutex.RUnlock()
+	fake.listReleasesMutex.RLock()
+	defer fake.listReleasesMutex.RUnlock()
 	fake.listTagsMutex.RLock()
 	defer fake.listTagsMutex.RUnlock()
 	fake.listTagsUntilMutex.RLock()

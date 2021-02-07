@@ -5,188 +5,269 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/xanzy/go-gitlab"
-
 	"github.com/edtan/gitlab-release-resource"
 	"github.com/edtan/gitlab-release-resource/fakes"
 )
+
+func v2r(versions []string) []*gitlab.Release {
+	res := []*gitlab.Release{}
+	for _, version := range versions {
+		res = append(res, &gitlab.Release{
+			Name: version,
+			TagName: version,
+			Commit: gitlab.Commit{
+				ID: "dabdab",
+			},
+		})
+	}
+	return res
+}
 
 var _ = Describe("Check Command", func() {
 	var (
 		gitlabClient *fakes.FakeGitLab
 		command      *resource.CheckCommand
-
-		returnedTags []*gitlab.Tag
+		request      *resource.CheckRequest
 	)
+
+	no_version := []string{}
+	one_version := []string{"v1.0.0"}
+	many_version := []string{
+		"v1.0.0",
+		"v2.1.10",
+		"v5.1.0",
+		"v1.0.1",
+		"v5.0.0",
+		"v1.1.0",
+		"v2.5.1",
+	}
 
 	BeforeEach(func() {
 		gitlabClient = &fakes.FakeGitLab{}
 		command = resource.NewCheckCommand(gitlabClient)
-
-		returnedTags = []*gitlab.Tag{}
+		request = &resource.CheckRequest{}
 	})
 
-	JustBeforeEach(func() {
-		gitlabClient.ListTagsReturns(returnedTags, nil)
-	})
+	Context("When no version are available", func() {
+		BeforeEach(func() {
+			gitlabClient.ListReleasesReturns(v2r(no_version), nil)
+		})
 
-	Context("when this is the first time that the resource has been run", func() {
-		Context("when there are no releases", func() {
+		Context("when this is the first time that the resource has been run", func() {
 			BeforeEach(func() {
-				returnedTags = []*gitlab.Tag{}
+				request.Version = resource.Version{}
 			})
 
-			It("returns no versions", func() {
-				versions, err := command.Run(resource.CheckRequest{})
+			It("detects no version", func() {
+				versions, err := command.Run(*request)
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(versions).Should(BeEmpty())
 			})
 		})
 
-		Context("when there are releases", func() {
+		Context("when the resource has already been run", func() {
 			BeforeEach(func() {
-				returnedTags = []*gitlab.Tag{
-					newTag("v0.4.0", "abc123"),
-					newTag("0.1.3", "bdc234"),
-					newTag("v0.1.2", "cde345"),
+				request.Version = resource.Version{
+					Tag: "v0.0.0",
+					CommitSHA: "dabdab",
 				}
 			})
 
-			It("outputs the most recent version only", func() {
-				command := resource.NewCheckCommand(gitlabClient)
-
-				response, err := command.Run(resource.CheckRequest{})
+			It("detects no version", func() {
+				versions, err := command.Run(*request)
 				Ω(err).ShouldNot(HaveOccurred())
+				Ω(versions).Should(BeEmpty())
+			})
+		})
+	})
 
-				Ω(response).Should(HaveLen(1))
-				Ω(response[0]).Should(Equal(resource.Version{
-					Tag: "v0.4.0",
+	Context("When one version is available", func() {
+		BeforeEach(func() {
+			gitlabClient.ListReleasesReturns(v2r(one_version), nil)
+		})
+
+		Context("when this is the first time that the resource has been run", func() {
+			BeforeEach(func() {
+				request.Version = resource.Version{}
+			})
+			It("detects a single version", func() {
+				versions, err := command.Run(*request)
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(versions).Should(HaveLen(1))
+				Ω(versions).Should(Equal([]resource.Version{
+					resource.Version{Tag: "v1.0.0", CommitSHA: "dabdab"},
+				}))
+			})
+		})
+
+		Context("when the resource has already been run", func() {
+			BeforeEach(func() {
+				request.Version = resource.Version{
+					Tag: "v0.0.0",
+					CommitSHA: "dabdab",
+				}
+			})
+			It("detects a single version", func() {
+				versions, err := command.Run(*request)
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(versions).Should(HaveLen(1))
+				Ω(versions).Should(Equal([]resource.Version{
+					{Tag: "v1.0.0", CommitSHA: "dabdab"},
+				}))
+			})
+		})
+
+		Context("when the resource has already been run with last version", func() {
+			BeforeEach(func() {
+				request.Version = resource.Version{
+					Tag: "v1.0.0",
+					CommitSHA: "dabdab",
+				}
+			})
+			It("detects the requested version", func() {
+				versions, err := command.Run(*request)
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(versions).Should(HaveLen(1))
+				Ω(versions).Should(Equal([]resource.Version{
+					{Tag: "v1.0.0", CommitSHA: "dabdab"},
 				}))
 			})
 		})
 	})
 
-	Context("when there are prior versions", func() {
-		Context("when there are no releases", func() {
-			BeforeEach(func() {
-				returnedTags = []*gitlab.Tag{}
-			})
+	Context("When many version are available", func() {
+		BeforeEach(func() {
+			gitlabClient.ListReleasesReturns(v2r(many_version), nil)
+		})
 
-			It("returns no versions", func() {
-				versions, err := command.Run(resource.CheckRequest{})
+		Context("when this is the first time that the resource has been run", func() {
+			BeforeEach(func() {
+				request.Version = resource.Version{}
+			})
+			It("detects a last available version", func() {
+				versions, err := command.Run(*request)
 				Ω(err).ShouldNot(HaveOccurred())
-				Ω(versions).Should(BeEmpty())
+				Ω(versions).Should(HaveLen(1))
+				Ω(versions).Should(Equal([]resource.Version{
+					{Tag: "v5.1.0", CommitSHA: "dabdab"},
+				}))
 			})
 		})
 
-		Context("when there are releases", func() {
-			Context("and there is a custom tag filter", func() {
+		Context("when the resource has already been run", func() {
+
+			Context("when all versions are new", func() {
 				BeforeEach(func() {
-					returnedTags = []*gitlab.Tag{
-						newTag("package-0.1.4", "abc123"),
-						newTag("package-0.4.0", "bcd234"),
-						newTag("package-0.1.3", "cde345"),
-						newTag("package-0.1.2", "def456"),
-					}
+					request.Version.Tag = "v0.0.1"
 				})
-
-				It("returns all of the versions that are newer", func() {
-					command := resource.NewCheckCommand(gitlabClient)
-
-					response, err := command.Run(resource.CheckRequest{
-						Version: resource.Version{
-							Tag: "package-0.1.3",
-						},
-					})
+				It("detects all versions correclty", func() {
+					versions, err := command.Run(*request)
 					Ω(err).ShouldNot(HaveOccurred())
-
-					Ω(response).Should(Equal([]resource.Version{
-						{Tag: "package-0.1.3"},
-						{Tag: "package-0.1.4"},
-						{Tag: "package-0.4.0"},
+					Ω(versions).Should(HaveLen(7))
+					Ω(versions).Should(Equal([]resource.Version{
+						{Tag: "v1.0.0",  CommitSHA: "dabdab"},
+						{Tag: "v1.0.1",  CommitSHA: "dabdab"},
+						{Tag: "v1.1.0",  CommitSHA: "dabdab"},
+						{Tag: "v2.1.10", CommitSHA: "dabdab"},
+						{Tag: "v2.5.1",  CommitSHA: "dabdab"},
+						{Tag: "v5.0.0",  CommitSHA: "dabdab"},
+						{Tag: "v5.1.0",  CommitSHA: "dabdab"},
 					}))
 				})
 			})
 
-			Context("and the releases do not contain a draft release", func() {
+			Context("when requested version has already been detected", func() {
 				BeforeEach(func() {
-					returnedTags = []*gitlab.Tag{
-						newTag("v0.1.4", "abc123"),
-						newTag("0.4.0", "bcd234"),
-						newTag("v0.1.3", "cde345"),
-						newTag("0.1.2", "def456"),
-					}
+					request.Version.Tag = "v5.1.0"
 				})
-
-				It("returns an empty list if the latest version has been checked", func() {
-					command := resource.NewCheckCommand(gitlabClient)
-
-					response, err := command.Run(resource.CheckRequest{
-						Version: resource.Version{
-							Tag: "0.4.0",
-						},
-					})
+				It("replies with already known version", func() {
+					versions, err := command.Run(*request)
 					Ω(err).ShouldNot(HaveOccurred())
-
-					Ω(response).Should(BeEmpty())
-				})
-
-				It("returns all of the versions that are newer", func() {
-					command := resource.NewCheckCommand(gitlabClient)
-
-					response, err := command.Run(resource.CheckRequest{
-						Version: resource.Version{
-							Tag: "v0.1.3",
-						},
-					})
-					Ω(err).ShouldNot(HaveOccurred())
-
-					Ω(response).Should(Equal([]resource.Version{
-						{Tag: "v0.1.3"},
-						{Tag: "v0.1.4"},
-						{Tag: "0.4.0"},
+					Ω(versions).Should(HaveLen(1))
+					Ω(versions).Should(Equal([]resource.Version{
+						{Tag: "v5.1.0",  CommitSHA: "dabdab"},
 					}))
 				})
+			})
 
-				It("returns the latest version if the current version is not found", func() {
-					command := resource.NewCheckCommand(gitlabClient)
-
-					response, err := command.Run(resource.CheckRequest{
-						Version: resource.Version{
-							Tag: "v3.4.5",
-						},
-					})
+			Context("when requested version has been deleted", func() {
+				BeforeEach(func() {
+					request.Version.Tag = "v2.5.0"
+				})
+				It("replies with all version greater than requested", func() {
+					versions, err := command.Run(*request)
 					Ω(err).ShouldNot(HaveOccurred())
-
-					Ω(response).Should(Equal([]resource.Version{
-						{Tag: "0.4.0"},
+					Ω(versions).Should(HaveLen(3))
+					Ω(versions).Should(Equal([]resource.Version{
+						{Tag: "v2.5.1",  CommitSHA: "dabdab"},
+						{Tag: "v5.0.0",  CommitSHA: "dabdab"},
+						{Tag: "v5.1.0",  CommitSHA: "dabdab"},
 					}))
 				})
+			})
 
-				Context("when there are not-quite-semver versions", func() {
-					BeforeEach(func() {
-						returnedTags = append(returnedTags, newTag("v1", "abc123"))
-						returnedTags = append(returnedTags, newTag("v0", "bcd234"))
-					})
-
-					It("combines them with the semver versions in a reasonable order", func() {
-						command := resource.NewCheckCommand(gitlabClient)
-
-						response, err := command.Run(resource.CheckRequest{
-							Version: resource.Version{
-								Tag: "v0.1.3",
-							},
-						})
-						Ω(err).ShouldNot(HaveOccurred())
-
-						Ω(response).Should(Equal([]resource.Version{
-							{Tag: "v0.1.3"},
-							{Tag: "v0.1.4"},
-							{Tag: "0.4.0"},
-							{Tag: "v1"},
-						}))
-					})
+			Context("when providing a custom tag filter", func() {
+				BeforeEach(func() {
+					request.Source.TagFilter = `^v([0-9]+\.1\.[0-9]+)`
+					request.Version.Tag = "v0.1.0"
+				})
+				It("replies with all version greater than requested", func() {
+					versions, err := command.Run(*request)
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(versions).Should(HaveLen(3))
+					Ω(versions).Should(Equal([]resource.Version{
+						{Tag: "v1.1.0",   CommitSHA: "dabdab"},
+						{Tag: "v2.1.10",  CommitSHA: "dabdab"},
+						{Tag: "v5.1.0",   CommitSHA: "dabdab"},
+					}))
 				})
 			})
 		})
 	})
+
+
+	Context("When dealing with complex postrelease and prerelease versions", func() {
+		BeforeEach(func() {
+			messy_version := append(many_version, []string{
+				"v1.0.0-dev1",
+				"v1.0.0_ora-dev1",
+				"production",
+				"v1.0.0_ora-dev2",
+				"v1.0.0_ora",
+				"v1.0.0-dev2",
+			}...)
+
+			gitlabClient.ListReleasesReturns(v2r(messy_version), nil)
+		})
+
+
+		Context("when the resource has already been run", func() {
+
+			Context("when all versions are new", func() {
+				BeforeEach(func() {
+					request.Version.Tag = "v0.0.1"
+					request.Source.TagFilter = "v?([0-9]+.*)"
+				})
+				It("detects all versions correclty", func() {
+					versions, err := command.Run(*request)
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(versions).Should(Equal([]resource.Version{
+						{Tag: "v1.0.0-dev1",  CommitSHA: "dabdab"},
+						{Tag: "v1.0.0-dev2",  CommitSHA: "dabdab"},
+						{Tag: "v1.0.0",  CommitSHA: "dabdab"},
+						{Tag: "v1.0.1",  CommitSHA: "dabdab"},
+						{Tag: "v1.0.0_ora-dev1",  CommitSHA: "dabdab"},
+						{Tag: "v1.0.0_ora-dev2",  CommitSHA: "dabdab"},
+						{Tag: "v1.0.0_ora",  CommitSHA: "dabdab"},
+						{Tag: "v1.1.0",  CommitSHA: "dabdab"},
+						{Tag: "v2.1.10", CommitSHA: "dabdab"},
+						{Tag: "v2.5.1",  CommitSHA: "dabdab"},
+						{Tag: "v5.0.0",  CommitSHA: "dabdab"},
+						{Tag: "v5.1.0",  CommitSHA: "dabdab"},
+					}))
+				})
+			})
+		})
+	})
+
 })

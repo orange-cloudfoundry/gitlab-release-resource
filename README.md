@@ -90,6 +90,15 @@ Also creates the following files:
 
 * `globs`: *Optional.* A list of globs for files that will be downloaded from
   the release. If not specified, all assets will be fetched.
+* `include_sources`: *Optional.* A list of source format to download from
+  the release. If not specified, no sources will be fetched. eg. `["zip", "tar.gz",
+  "tar.bz2", "tar"]`
+* `include_source_tarball`: *Optional.* Enables downloading of the source artifact tarball
+   for the release as `source.tar.gz`.  Defaults to `false`. Equivalent to
+   `include_sources: ["tar.gz"]`.
+* `include_source_zip`: *Optional.* Enables downloading of the source artifact tarball
+   for the release as `source.zip`.  Defaults to `false`. Equivalent to
+   `include_sources: ["zip"]`.
 
 ### `out`: Publish a release.
 
@@ -107,7 +116,10 @@ matching the patterns in `globs` to the release.
 * `tag_prefix`: *Optional.*  If specified, the tag read from the file will be
 prepended with this string. This is useful for adding v in front of version numbers.
 
-* ~~`body`: *Optional.* A path to a file containing the body text of the release.~~ (Not yet supported)
+* `name`: *Optional.* A path to a file containing the name of the release. Defaults to `tag` value.
+  for the release.
+
+* `body`: *Optional.* A path to a file containing the body text of the release.
 
 * `globs`: *Optional.* A list of globs for files that will be uploaded alongside
   the created release.
@@ -116,11 +128,11 @@ prepended with this string. This is useful for adding v in front of version numb
 
 ### Prerequisites
 
-* golang is *required* - version 1.9.x is tested; earlier versions may also
+* golang is *required* - version 1.15.x is tested; earlier versions may also
   work.
-* docker is *required* - version 17.06.x is tested; earlier versions may also
+* docker is *required* - version 19.03.x is tested; earlier versions may also
   work.
-* godep is used for dependency management of the golang packages.
+* go mod is used for dependency management of the golang packages.
 
 ### Running the tests
 

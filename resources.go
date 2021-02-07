@@ -38,6 +38,7 @@ type InRequest struct {
 
 type InParams struct {
 	Globs                []string `json:"globs"`
+	IncludeSources       []string `json:"include_sources"`
 	IncludeSourceTarball bool     `json:"include_source_tarball"`
 	IncludeSourceZip     bool     `json:"include_source_zip"`
 }

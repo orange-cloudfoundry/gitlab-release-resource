@@ -18,18 +18,33 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
+var (
+	NotFound = errors.New("object not found")
+)
+
 //go:generate counterfeiter . GitLab
 
 type GitLab interface {
 	ListTags() ([]*gitlab.Tag, error)
 	ListTagsUntil(tag_name string) ([]*gitlab.Tag, error)
+	ListReleases() ([]*gitlab.Release, error)
+	GetRelease(tag_name string) (*gitlab.Release, error)
 	GetTag(tag_name string) (*gitlab.Tag, error)
 	CreateTag(tag_name string, ref string) (*gitlab.Tag, error)
-	CreateRelease(tag_name string, description string) (*gitlab.Release, error)
-	UpdateRelease(tag_name string, description string) (*gitlab.Release, error)
+	CreateRelease(name string, tag string, description *string) (*gitlab.Release, error)
+	UpdateRelease(name string, tag string, description *string) (*gitlab.Release, error)
+
 	UploadProjectFile(file string) (*gitlab.ProjectFile, error)
 	DownloadProjectFile(url, file string) error
+
+	GetReleaseLinks(tag string) ([]*gitlab.ReleaseLink, error)
+	CreateReleaseLink(tag string, name string, url string) (*gitlab.ReleaseLink, error)
+	DeleteReleaseLink(tag string, links *gitlab.ReleaseLink) (error)
 }
+
+const (
+	defaultBaseURL = "https://gitlab.com/"
+)
 
 type GitlabClient struct {
 	client *gitlab.Client
@@ -48,16 +63,21 @@ func NewGitLabClient(source Source) (*GitlabClient, error) {
 		}
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 	}
+	httpClientOpt := gitlab.WithHTTPClient(httpClient)
 
-	client := gitlab.NewClient(httpClient, source.AccessToken)
-
+	baseURLOpt := gitlab.WithBaseURL(defaultBaseURL)
 	if source.GitLabAPIURL != "" {
 		var err error
 		baseUrl, err := url.Parse(source.GitLabAPIURL)
 		if err != nil {
 			return nil, err
 		}
-		client.SetBaseURL(baseUrl.String())
+		baseURLOpt = gitlab.WithBaseURL(baseUrl.String())
+	}
+
+	client, err := gitlab.NewClient(source.AccessToken, httpClientOpt, baseURLOpt)
+	if err != nil {
+		return nil, err
 	}
 
 	return &GitlabClient{
@@ -95,6 +115,31 @@ func (g *GitlabClient) ListTags() ([]*gitlab.Tag, error) {
 	}
 
 	return allTags, nil
+}
+
+
+
+func (g *GitlabClient) ListReleases() ([]*gitlab.Release, error) {
+	var allReleases []*gitlab.Release
+	opt := &gitlab.ListReleasesOptions{
+		PerPage: 100,
+		Page:    1,
+	}
+
+	for {
+		releases, res, err := g.client.Releases.ListReleases(g.repository, opt)
+		if err != nil {
+			return []*gitlab.Release{}, err
+		}
+		allReleases = append(allReleases, releases...)
+
+		if opt.Page >= res.TotalPages {
+			break
+		}
+		opt.Page = res.NextPage
+	}
+
+	return allReleases, nil
 }
 
 func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
@@ -167,18 +212,37 @@ func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 	return allTags, nil
 }
 
+
 func (g *GitlabClient) GetTag(tag_name string) (*gitlab.Tag, error) {
 	tag, res, err := g.client.Tags.GetTag(g.repository, tag_name)
-	if err != nil {
-		return &gitlab.Tag{}, err
-	}
-
-	err = res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound {
+		return nil, NotFound
+	}
 	return tag, nil
+}
+
+func (g *GitlabClient) GetRelease(tag_name string) (*gitlab.Release, error) {
+	release, resp, err := g.client.Releases.GetRelease(g.repository, tag_name)
+	if err != nil {
+		if resp == nil {
+			return nil, err
+		}
+		switch resp.StatusCode {
+		case http.StatusForbidden:
+			return nil, NotFound
+		case http.StatusNotFound:
+			return nil, NotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return release, nil
 }
 
 func (g *GitlabClient) CreateTag(ref string, tag_name string) (*gitlab.Tag, error) {
@@ -188,25 +252,22 @@ func (g *GitlabClient) CreateTag(ref string, tag_name string) (*gitlab.Tag, erro
 		Message: gitlab.String(tag_name),
 	}
 
-	tag, res, err := g.client.Tags.CreateTag(g.repository, opt)
+	tag, _, err := g.client.Tags.CreateTag(g.repository, opt)
 	if err != nil {
 		return &gitlab.Tag{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
 	}
 
 	return tag, nil
 }
 
-func (g *GitlabClient) CreateRelease(tag_name string, description string) (*gitlab.Release, error) {
+func (g *GitlabClient) CreateRelease(name string, tag string, description *string) (*gitlab.Release, error) {
 	opt := &gitlab.CreateReleaseOptions{
-		Description: gitlab.String(description),
+		Name: gitlab.String(name),
+		TagName: gitlab.String(tag),
+		Description: description,
 	}
 
-	release, res, err := g.client.Tags.CreateRelease(g.repository, tag_name, opt)
+	release, res, err := g.client.Releases.CreateRelease(g.repository, opt)
 	if err != nil {
 		return &gitlab.Release{}, err
 	}
@@ -217,71 +278,97 @@ func (g *GitlabClient) CreateRelease(tag_name string, description string) (*gitl
 		return nil, errors.New("release already exists")
 	}
 
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
 	return release, nil
 }
 
-func (g *GitlabClient) UpdateRelease(tag_name string, description string) (*gitlab.Release, error) {
-	opt := &gitlab.UpdateReleaseOptions{
-		Description: gitlab.String(description),
+func (g *GitlabClient) GetReleaseLinks(tag string) ([]*gitlab.ReleaseLink, error) {
+	links := []*gitlab.ReleaseLink{}
+	opt := &gitlab.ListReleaseLinksOptions{
+		PerPage: 100,
+		Page: 1,
 	}
+	for {
+		items, resp, err := g.client.ReleaseLinks.ListReleaseLinks(g.repository, tag, opt)
+		if err != nil {
+			return nil, err
+		}
 
-	release, res, err := g.client.Tags.UpdateRelease(g.repository, tag_name, opt)
+		links = append(links, items...)
+		if opt.Page >= resp.TotalPages {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	return links, nil
+}
+
+func (g *GitlabClient) DeleteReleaseLink(tag string, link *gitlab.ReleaseLink) (error) {
+	_, _, err := g.client.ReleaseLinks.DeleteReleaseLink(g.repository, tag, link.ID)
 	if err != nil {
-		return &gitlab.Release{}, err
+		return err
 	}
+	return nil
+}
 
-	err = res.Body.Close()
+
+func (g *GitlabClient) CreateReleaseLink(tag string, name string, url string) (*gitlab.ReleaseLink, error) {
+	opt := &gitlab.CreateReleaseLinkOptions{
+		Name: gitlab.String(name),
+		URL:  gitlab.String(url),
+	}
+	link, _, err := g.client.ReleaseLinks.CreateReleaseLink(g.repository, tag, opt)
 	if err != nil {
 		return nil, err
+	}
+
+	return link, nil
+}
+
+func (g *GitlabClient) UpdateRelease(name string, tag string, description *string) (*gitlab.Release, error) {
+	opt := &gitlab.UpdateReleaseOptions{
+		Name: gitlab.String(name),
+		Description: description,
+	}
+
+	release, _, err := g.client.Releases.UpdateRelease(g.repository, tag, opt)
+	if err != nil {
+		return &gitlab.Release{}, err
 	}
 
 	return release, nil
 }
 
 func (g *GitlabClient) UploadProjectFile(file string) (*gitlab.ProjectFile, error) {
-	projectFile, res, err := g.client.Projects.UploadFile(g.repository, file)
+	projectFile, _, err := g.client.Projects.UploadFile(g.repository, file)
 	if err != nil {
 		return &gitlab.ProjectFile{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
 	}
 
 	return projectFile, nil
 }
 
-func (g *GitlabClient) DownloadProjectFile(filePath, destPath string) error {
+func (g *GitlabClient) DownloadProjectFile(fileURL, destPath string) error {
 	out, err := os.Create(destPath)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
-	// e.g. (group/project) + (/uploads/hash/filename)
-	filePathRef, err := url.Parse(g.repository + filePath)
+	// e.g. (baseURL) + (group/project) + (/uploads/hash/filename)
+	filePathRef, err := url.Parse(fileURL)
 	if err != nil {
 		return err
 	}
 
-	// e.g. (https://gitlab-instance/api/v4) + (/group/project/uploads/hash/filename)
-	projectFileUrl := g.client.BaseURL().ResolveReference(filePathRef)
-
 	// https://gitlab.com/gitlab-org/gitlab-ce/issues/51447
-	nonApiUrl := strings.Replace(projectFileUrl.String(), "/api/v4", "", 1)
-	projectFileUrl, err = url.Parse(nonApiUrl)
+	nonApiUrl := strings.Replace(filePathRef.String(), "/api/v4", "", 1)
+	filePathRef, err = url.Parse(nonApiUrl)
 	if err != nil {
 		return err
 	}
 
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", projectFileUrl.String(), nil)
+	req, err := http.NewRequest("GET", filePathRef.String(), nil)
 	if err != nil {
 		return err
 	}

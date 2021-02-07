@@ -2,7 +2,6 @@ package resource
 
 import (
 	"sort"
-
 	"github.com/cppforlife/go-semi-semantic/version"
 	"github.com/xanzy/go-gitlab"
 )
@@ -18,90 +17,56 @@ func NewCheckCommand(gitlab GitLab) *CheckCommand {
 }
 
 func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
-	var tags []*gitlab.Tag
-	var err error
-	if (request.Version == Version{}) {
-		tags, err = c.gitlab.ListTags()
-	} else {
-		tags, err = c.gitlab.ListTagsUntil(request.Version.Tag)
-	}
-
-	if err != nil {
-		return []Version{}, err
-	}
-
-	if len(tags) == 0 {
-		return []Version{}, nil
-	}
-
-	var filteredTags []*gitlab.Tag
-
-	// TODO: make ListTagsUntil work better with this
 	versionParser, err := newVersionParser(request.Source.TagFilter)
+
+	// fetch available releaes
+	releases, err := c.gitlab.ListReleases()
 	if err != nil {
 		return []Version{}, err
 	}
 
-	for _, tag := range tags {
-		if _, err := version.NewVersionFromString(versionParser.parse(tag.Name)); err != nil {
-			continue
-		}
-
-		if tag.Release == nil {
-			continue
-		}
-
-		filteredTags = append(filteredTags, tag)
+	// filter releases
+	filteredReleases := []*gitlab.Release{}
+	targetVersion, err := version.NewVersionFromString(versionParser.parse(request.Version.Tag))
+	if (request.Version != Version{}) && err != nil {
+		return []Version{}, err
 	}
 
-	sort.Slice(filteredTags, func(i, j int) bool {
-		first, err := version.NewVersionFromString(versionParser.parse(filteredTags[i].Name))
+	for _, r := range releases {
+		current, err := version.NewVersionFromString(versionParser.parse(r.TagName))
+		// must match tag regex
 		if err != nil {
-			return true
+			continue
 		}
-
-		second, err := version.NewVersionFromString(versionParser.parse(filteredTags[j].Name))
-		if err != nil {
-			return false
+		// when given, keep only releases greater-or-equal than target version
+		if ((request.Version == Version{}) || !current.IsLt(targetVersion)) {
+			filteredReleases = append(filteredReleases, r)
 		}
+	}
 
+	// sort releases from older to newer
+	sort.Slice(filteredReleases, func(i, j int) bool {
+		// errors ingored since has already been filtered out by regexp
+		first, _ := version.NewVersionFromString(versionParser.parse(filteredReleases[i].Name))
+		second, _ := version.NewVersionFromString(versionParser.parse(filteredReleases[j].Name))
 		return first.IsLt(second)
 	})
 
-	if len(filteredTags) == 0 {
+	// no version available
+	if len(filteredReleases) == 0 {
 		return []Version{}, nil
 	}
-	latestTag := filteredTags[len(filteredTags)-1]
 
+	// first check, no target version given, reply last available release
+	latestRelease := filteredReleases[len(filteredReleases) - 1]
 	if (request.Version == Version{}) {
-		return []Version{versionFromTag(latestTag)}, nil
+		return []Version{versionFromRelease(latestRelease)}, nil
 	}
 
-	if latestTag.Name == request.Version.Tag {
-		return []Version{versionFromTag(latestTag)}, nil
+	// built list of next available versions
+	nextVersions := []Version{}
+	for _, r := range filteredReleases {
+		nextVersions = append(nextVersions, versionFromRelease(r))
 	}
-
-	upToLatest := false
-	nextVersions := []Version{} // contains the requested version and all newer ones
-
-	for _, release := range filteredTags {
-		if !upToLatest {
-			version := release.Name
-			upToLatest = request.Version.Tag == version
-		}
-
-		if upToLatest {
-			nextVersions = append(nextVersions, Version{Tag: release.Name})
-		}
-	}
-
-	if !upToLatest {
-		// current version was removed; start over from latest
-		nextVersions = append(
-			nextVersions,
-			versionFromTag(filteredTags[len(filteredTags)-1]),
-		)
-	}
-
 	return nextVersions, nil
 }

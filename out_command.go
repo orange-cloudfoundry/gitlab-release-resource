@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+	"github.com/xanzy/go-gitlab"
 )
 
 type OutCommand struct {
@@ -21,85 +22,124 @@ func NewOutCommand(gitlab GitLab, writer io.Writer) *OutCommand {
 	}
 }
 
+func (c *OutCommand) ensureRelease(name string, tag string, body *string) (*gitlab.Release, error) {
+	_, err := c.gitlab.GetRelease(tag)
+	if err != nil {
+		if !errors.Is(err, NotFound) {
+			return nil, err
+		}
+		return c.gitlab.CreateRelease(name, tag, body)
+	}
+	return c.gitlab.UpdateRelease(name, tag, body)
+}
+
+func (c *OutCommand) ensureTag(tag string, commitishPath string) (*gitlab.Tag, error) {
+	t, err := c.gitlab.GetTag(tag)
+	if err != nil {
+		if !errors.Is(err, NotFound) {
+			return nil, err
+		}
+		commitish, err := c.fileContents(commitishPath)
+		if err != nil {
+			return nil, err
+		}
+		return c.gitlab.CreateTag(tag, commitish)
+	}
+	return t, nil
+}
+
+
+
+func (c *OutCommand) overwriteReleaseLinks(tag string, filePaths []string, req OutRequest) (error) {
+	links, err := c.gitlab.GetReleaseLinks(tag)
+	if err != nil {
+		return err
+	}
+
+	for _, link := range links {
+		if err := c.gitlab.DeleteReleaseLink(tag, link); err != nil {
+			return err
+		}
+	}
+
+	for _, file := range filePaths {
+		uploadedFile, err := c.gitlab.UploadProjectFile(file)
+		if err != nil {
+			return err
+		}
+
+
+		url := fmt.Sprintf("%s/%s/%s", req.Source.GitLabAPIURL, req.Source.Repository, uploadedFile.URL)
+		if _, err := c.gitlab.CreateReleaseLink(tag, filepath.Base(file), url); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
 func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, error) {
+	var (
+		body *string
+	)
 	params := request.Params
 
-	// name, err := c.fileContents(filepath.Join(sourceDir, request.Params.NamePath))
-	// if err != nil {
-	// 	return OutResponse{}, err
-	// }
+	tag_name, err := c.fileContents(filepath.Join(sourceDir, params.TagPath))
+	if err != nil {
+		return OutResponse{}, err
+	}
+	tag_name = request.Params.TagPrefix + tag_name
 
-	tag_name, err := c.fileContents(filepath.Join(sourceDir, request.Params.TagPath))
+
+	if params.NamePath == "" {
+		params.NamePath = params.TagPath
+	}
+	name, err := c.fileContents(filepath.Join(sourceDir, params.NamePath))
 	if err != nil {
 		return OutResponse{}, err
 	}
 
-	tag_name = request.Params.TagPrefix + tag_name
+	if params.BodyPath != "" {
+		bodyVal, err := c.fileContents(filepath.Join(sourceDir, params.BodyPath))
+		if err != nil {
+			return OutResponse{}, err
+		}
+		body = &bodyVal
+	}
 
-	// if request.Params.BodyPath != "" {
-	// 	_, err := c.fileContents(filepath.Join(sourceDir, request.Params.BodyPath))
-	// 	if err != nil {
-	// 		return OutResponse{}, err
-	// 	}
-	// }
-
-	tagExists := true
-	tag, err := c.gitlab.GetTag(tag_name)
+	// ensure tag exist, create from commitish if needed
+	_, err = c.ensureTag(tag_name, filepath.Join(sourceDir, params.CommitishPath))
 	if err != nil {
-		//TODO: improve the check to be based on the specific error
-		tagExists = false
-	}
-
-	// create the tag first, as next sections assume the tag exists
-	if !tagExists {
-		targetCommitish, err := c.fileContents(filepath.Join(sourceDir, request.Params.CommitishPath))
-		if err != nil {
-			return OutResponse{}, err
-		}
-		tag, err = c.gitlab.CreateTag(targetCommitish, tag_name)
 		if err != nil {
 			return OutResponse{}, err
 		}
 	}
 
-	// create a new release if it doesn't exist yet
-	if tag.Release == nil {
-		_, err = c.gitlab.CreateRelease(tag_name, "Auto-generated from Concourse GitLab Release Resource")
-		if err != nil {
-			return OutResponse{}, err
-		}
+	// ensure release exists, create from name, tag and body if needed
+	r, err := c.ensureRelease(name, tag_name, body)
+	if err != nil {
+		return OutResponse{}, err
 	}
 
-	// upload files
-	var fileLinks []string
-	for _, fileGlob := range params.Globs {
-		matches, err := filepath.Glob(filepath.Join(sourceDir, fileGlob))
+	filePaths := []string{}
+	for _, glob := range  params.Globs {
+		matches, err := filepath.Glob(filepath.Join(sourceDir, glob))
 		if err != nil {
 			return OutResponse{}, err
 		}
 
 		if len(matches) == 0 {
-			return OutResponse{}, fmt.Errorf("could not find file that matches glob '%s'", fileGlob)
+			return OutResponse{}, fmt.Errorf("could not find file that matches glob '%s'", glob)
 		}
-
-		for _, filePath := range matches {
-			projectFile, err := c.gitlab.UploadProjectFile(filePath)
-			if err != nil {
-				return OutResponse{}, err
-			}
-			fileLinks = append(fileLinks, projectFile.Markdown)
-		}
+		filePaths = append(filePaths, matches...)
 	}
-
-	// update the release
-	_, err = c.gitlab.UpdateRelease(tag_name, strings.Join(fileLinks, "\n"))
-	if err != nil {
-		return OutResponse{}, errors.New("could not get saved tag")
+	if err := c.overwriteReleaseLinks(tag_name, filePaths, request); err != nil {
+			return OutResponse{}, err
 	}
 
 	return OutResponse{
-		Version:  versionFromTag(tag),
-		Metadata: metadataFromTag(tag),
+		Version:  versionFromRelease(r),
+		Metadata: metadataFromRelease(r),
 	}, nil
 }
 

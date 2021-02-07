@@ -2,7 +2,6 @@ package resource
 
 import (
 	"regexp"
-
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -37,3 +36,13 @@ func versionFromTag(tag *gitlab.Tag) Version {
 		CommitSHA: tag.Commit.ID,
 	}
 }
+
+
+func versionFromRelease(release *gitlab.Release) Version {
+	return Version{
+		Tag:       release.TagName,
+		CommitSHA: release.Commit.ID,
+	}
+}
+
+
