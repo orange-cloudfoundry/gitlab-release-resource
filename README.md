@@ -1,10 +1,12 @@
 # GitLab Releases Resource
 
-Fetches and creates versioned GitLab resources.  GitLab resources are metadata attached to tags.  Note that `check` will skip tags that do not have associated resources.
+Fetches and creates versioned GitLab releases.   Note that `check` will skip tags that do not have associated releases.
 
-Note that this is still in development, and is still undergoing changes.  It may or may not work properly at the moment, but should hopefully be somewhat more stable soon.
+:warning: Limitations :warning:
 
-You may want to clean up your uploads folder over time if you re-run a put step with the same inputs, as this will simply re-upload the files under a new hash.
+Gitlab has a [known bug](https://gitlab.com/gitlab-org/gitlab/-/issues/28978) that makes impossible to download assets published to a project using a private-token. When using `in` with such release, download assets will contain the plain HTML of gitlab's sign-in page. 
+
+Once the bug will be fixed, the resource will behave as expected with no further modification.
 
 ## Source Configuration
 
@@ -151,3 +153,9 @@ docker build -t gitlab-release-resource .
 
 Please make all pull requests to the `master` branch and ensure tests pass
 locally.
+
+### Credits
+
+This project was initialy created by @edtan and forked from [edtan/gitlab-release-resource](https://github.com/concourse/github-release-resource) which is no longer maintained. It has been re-imported to get rid of the fork relationship to the repository [concourse/github-release-resource](https://github.com/concourse/github-release-resource).
+
+
