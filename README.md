@@ -1,3 +1,24 @@
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [GitLab Releases Resource](#gitlab-releases-resource)
+    - [Source Configuration](#source-configuration)
+        - [Example](#example)
+    - [Behavior](#behavior)
+        - [check: Check for released versions](#check-check-for-released-versions)
+        - [in: Fetch assets from a release](#in-fetch-assets-from-a-release)
+            - [Parameters](#parameters)
+        - [out: Publish a release](#out-publish-a-release)
+            - [Parameters](#parameters-1)
+    - [Development](#development)
+        - [Prerequisites](#prerequisites)
+        - [Running the tests](#running-the-tests)
+        - [Contributing](#contributing)
+        - [Credits](#credits)
+
+<!-- markdown-toc end -->
+
+
 # GitLab Releases Resource
 
 Fetches and creates versioned GitLab releases.   Note that `check` will skip tags that do not have associated releases.
@@ -70,12 +91,12 @@ To set a custom tag filter:
 
 ## Behavior
 
-### `check`: Check for released versions.
+### `check`: Check for released versions
 
 Releases are listed and sorted by their tag, using
 [semver](http://semver.org) semantics if possible. If `version` is specified, `check` returns releases from the specified version on. Otherwise, `check` returns the latest release.
 
-### `in`: Fetch assets from a release.
+### `in`: Fetch assets from a release
 
 Fetches artifacts from the given release version. If the version is not
 specified, the latest version is chosen using [semver](http://semver.org)
@@ -102,7 +123,7 @@ Also creates the following files:
    for the release as `source.zip`.  Defaults to `false`. Equivalent to
    `include_sources: ["zip"]`.
 
-### `out`: Publish a release.
+### `out`: Publish a release
 
 Given a `commit_sha` and  `tag`, this tags the commit and creates a release on GitLab, then uploads the files
 matching the patterns in `globs` to the release.
@@ -159,3 +180,7 @@ locally.
 This project was initialy created by @edtan and forked from [edtan/gitlab-release-resource](https://github.com/concourse/github-release-resource) which is no longer maintained. It has been re-imported to get rid of the fork relationship to the repository [concourse/github-release-resource](https://github.com/concourse/github-release-resource).
 
 
+
+<!-- Local Variables: -->
+<!-- ispell-local-dictionary: "american" -->
+<!-- End: -->
