@@ -118,6 +118,21 @@ var _ = Describe("GitLab Client", func() {
 				Expect(tag).To(Equal(expectedTag))
 			})
 		})
+
+		Context("The tag does not exist", func() {
+			BeforeEach(func () {
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/api/v4/projects/concourse/repository/tags/some-tag"),
+						ghttp.RespondWith(404, `{ "message": "404 Tag Not Found" }`),
+					),
+				)
+			})
+			It("Returns the NotFound error", func() {
+				_, err := client.GetTag("some-tag")
+				Expect(err).To(Equal(NotFound))
+			})
+		})
 	})
 
 	Describe("GetRelease", func() {
