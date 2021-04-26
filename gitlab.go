@@ -244,7 +244,7 @@ func (g *GitlabClient) GetRelease(tag_name string) (*gitlab.Release, error) {
 	return release, nil
 }
 
-func (g *GitlabClient) CreateTag(ref string, tag_name string) (*gitlab.Tag, error) {
+func (g *GitlabClient) CreateTag(tag_name string, ref string) (*gitlab.Tag, error) {
 	opt := &gitlab.CreateTagOptions{
 		TagName: gitlab.String(tag_name),
 		Ref:     gitlab.String(ref),
