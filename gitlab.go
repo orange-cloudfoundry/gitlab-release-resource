@@ -212,17 +212,16 @@ func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 	return allTags, nil
 }
 
-
 func (g *GitlabClient) GetTag(tag_name string) (*gitlab.Tag, error) {
-	tag, res, err := g.client.Tags.GetTag(g.repository, tag_name)
+	tag, resp, err := g.client.Tags.GetTag(g.repository, tag_name)
 	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, NotFound
+		}
 		return nil, err
 	}
 
-	defer res.Body.Close()
-	if res.StatusCode == http.StatusNotFound {
-		return nil, NotFound
-	}
+	defer resp.Body.Close()
 	return tag, nil
 }
 
