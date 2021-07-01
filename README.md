@@ -93,8 +93,14 @@ To set a custom tag filter:
 
 ### `check`: Check for released versions
 
-Releases are listed and sorted by their tag, using
-[semver](http://semver.org) semantics if possible. If `version` is specified, `check` returns releases from the specified version on. Otherwise, `check` returns the latest release.
+Releases are listed and sorted by their tag, using https://github.com/cppforlife/go-semi-semantic.
+Few example:
+- `v1.0.0` < `v1.0.5` < `v1.10.0` < `v2.0.0` (intuitive behaviour)
+- `v1.0.0-dev1` < `v1.0.0-dev2` < `v1.0.0` (empty dash postfix takes priority)
+- `v1.0.0-dev10` < `v1.0.0-rc1` (dash postfixes are compared alphabetically)
+- `v1.0.0.1` < `v1.0.0_dev` (non integer parts are compared alphabetically, `1` < `0_dev`)
+
+If `version` is specified, `check` returns releases from the specified version on. Otherwise, `check` returns the latest release.
 
 ### `in`: Fetch assets from a release
 
