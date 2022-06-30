@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -337,8 +338,13 @@ func (g *GitlabClient) UpdateRelease(name string, tag string, description *strin
 	return release, nil
 }
 
-func (g *GitlabClient) UploadProjectFile(file string) (*gitlab.ProjectFile, error) {
-	projectFile, _, err := g.client.Projects.UploadFile(g.repository, file)
+func (g *GitlabClient) UploadProjectFile(filepath string) (*gitlab.ProjectFile, error) {
+	reader, err := os.Open(filepath)
+	if err != nil {
+		return &gitlab.ProjectFile{}, err
+	}
+	filename := path.Base(filepath)
+	projectFile, _, err := g.client.Projects.UploadFile(g.repository, reader, filename)
 	if err != nil {
 		return &gitlab.ProjectFile{}, err
 	}
