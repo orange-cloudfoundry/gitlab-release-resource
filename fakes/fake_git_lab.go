@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	resource "github.com/edtan/gitlab-release-resource"
+	resource "github.com/orange-cloudfoundry/gitlab-release-resource"
 	gitlab "github.com/xanzy/go-gitlab"
 )
 

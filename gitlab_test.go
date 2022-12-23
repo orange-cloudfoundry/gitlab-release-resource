@@ -3,7 +3,7 @@ package resource_test
 import (
 	"net/http"
 
-	. "github.com/edtan/gitlab-release-resource"
+	. "github.com/orange-cloudfoundry/gitlab-release-resource"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

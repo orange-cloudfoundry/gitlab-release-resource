@@ -17,8 +17,8 @@ import (
 
 	"github.com/xanzy/go-gitlab"
 
-	"github.com/edtan/gitlab-release-resource"
-	"github.com/edtan/gitlab-release-resource/fakes"
+	"github.com/orange-cloudfoundry/gitlab-release-resource"
+	"github.com/orange-cloudfoundry/gitlab-release-resource/fakes"
 )
 
 var _ = Describe("In Command", func() {

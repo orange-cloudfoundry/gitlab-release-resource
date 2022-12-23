@@ -1,4 +1,4 @@
-module github.com/edtan/gitlab-release-resource
+module github.com/orange-cloudfoundry/gitlab-release-resource
 
 go 1.19
 

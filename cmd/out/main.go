@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/edtan/gitlab-release-resource"
+	"github.com/orange-cloudfoundry/gitlab-release-resource"
 )
 
 func main() {
