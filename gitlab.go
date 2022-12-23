@@ -120,8 +120,10 @@ func (g *GitlabClient) ListTags() ([]*gitlab.Tag, error) {
 func (g *GitlabClient) ListReleases() ([]*gitlab.Release, error) {
 	var allReleases []*gitlab.Release
 	opt := &gitlab.ListReleasesOptions{
-		PerPage: 100,
-		Page:    1,
+		ListOptions: gitlab.ListOptions{
+			PerPage: 100,
+			Page:    1,
+		},
 	}
 
 	for {
