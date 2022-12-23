@@ -95,12 +95,12 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 	}
 
 	for _, asset := range release.Assets.Links {
-		path := filepath.Join(destDir, asset.Name)
+		destPath := filepath.Join(destDir, asset.Name)
 		if !c.matchAsset(asset.Name, request.Params.Globs) {
 			continue
 		}
 
-		err := c.gitlab.DownloadProjectFile(asset.URL, path)
+		err := c.gitlab.DownloadProjectFile(asset.URL, destPath)
 		if err != nil {
 			return InResponse{}, err
 		}
@@ -122,8 +122,8 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 		}
 
 		name := path.Base(source.URL)
-		path := filepath.Join(destDir, name)
-		err := c.gitlab.DownloadProjectFile(source.URL, path)
+		destPath := filepath.Join(destDir, name)
+		err := c.gitlab.DownloadProjectFile(source.URL, destPath)
 		if err != nil {
 			return InResponse{}, err
 		}
