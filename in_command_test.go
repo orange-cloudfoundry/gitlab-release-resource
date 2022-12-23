@@ -38,11 +38,13 @@ var _ = Describe("In Command", func() {
 		gitlabClient = &fakes.FakeGitLab{}
 		// gitlabServer = ghttp.NewServer()
 		command = resource.NewInCommand(gitlabClient, ioutil.Discard)
+		inErr = nil
 		tmpDir, err = ioutil.TempDir("", "gitlab-release")
 		Ω(err).ShouldNot(HaveOccurred())
 		destDir = filepath.Join(tmpDir, "destination")
 		gitlabClient.DownloadProjectFileReturns(nil)
 		inRequest = resource.InRequest{}
+		inResponse = resource.InResponse{}
 	})
 
 	AfterEach(func() {
@@ -330,6 +332,22 @@ var _ = Describe("In Command", func() {
 
 		It("returns the error", func() {
 			Ω(inErr).Should(Equal(disaster))
+		})
+	})
+
+	Context("with incomplete input JSON", func() {
+		Context("is missing version", func() {
+			It("complain about it", func() {
+				inResponse, inErr = command.Run(destDir, inRequest)
+				Ω(inErr).Should(HaveOccurred())
+			})
+		})
+		Context("is missing version tag", func() {
+			It("complain about it", func() {
+				inRequest.Version = &resource.Version{}
+				inResponse, inErr = command.Run(destDir, inRequest)
+				Ω(inErr).Should(HaveOccurred())
+			})
 		})
 	})
 })

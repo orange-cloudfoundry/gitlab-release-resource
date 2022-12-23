@@ -55,6 +55,14 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 		return InResponse{}, err
 	}
 
+	if request.Version == nil {
+		return InResponse{}, errors.New("missing required Version")
+	}
+
+	if request.Version.Tag == "" {
+		return InResponse{}, errors.New("missing required Version Tag")
+	}
+
 	release, err := c.gitlab.GetRelease(request.Version.Tag)
 	if err != nil {
 		if errors.Is(err, NotFound) {
