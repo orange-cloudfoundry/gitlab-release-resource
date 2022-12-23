@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -140,7 +140,7 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 }
 
 func (c *OutCommand) fileContents(path string) (string, error) {
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

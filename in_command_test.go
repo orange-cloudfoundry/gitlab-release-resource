@@ -3,7 +3,7 @@ package resource_test
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,9 +31,9 @@ var _ = Describe("In Command", func() {
 	BeforeEach(func() {
 		var err error
 		gitlabClient = &fakes.FakeGitLab{}
-		command = resource.NewInCommand(gitlabClient, ioutil.Discard)
+		command = resource.NewInCommand(gitlabClient, io.Discard)
 		inErr = nil
-		tmpDir, err = ioutil.TempDir("", "gitlab-release")
+		tmpDir, err = os.MkdirTemp("", "gitlab-release")
 		Ω(err).ShouldNot(HaveOccurred())
 		destDir = filepath.Join(tmpDir, "destination")
 		gitlabClient.DownloadProjectFileReturns(nil)
@@ -135,19 +135,19 @@ var _ = Describe("In Command", func() {
 			It("does create the body, tag and version files", func() {
 				inResponse, inErr = command.Run(destDir, inRequest)
 
-				contents, err := ioutil.ReadFile(path.Join(destDir, "tag"))
+				contents, err := os.ReadFile(path.Join(destDir, "tag"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contents)).Should(Equal("v0.35.0"))
 
-				contents, err = ioutil.ReadFile(path.Join(destDir, "version"))
+				contents, err = os.ReadFile(path.Join(destDir, "version"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contents)).Should(Equal("0.35.0"))
 
-				contents, err = ioutil.ReadFile(path.Join(destDir, "commit_sha"))
+				contents, err = os.ReadFile(path.Join(destDir, "commit_sha"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contents)).Should(Equal("abc123"))
 
-				contents, err = ioutil.ReadFile(path.Join(destDir, "body"))
+				contents, err = os.ReadFile(path.Join(destDir, "body"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contents)).Should(Equal("*markdown*"))
 			})
@@ -167,10 +167,10 @@ var _ = Describe("In Command", func() {
 
 				It("does create the body, tag and version files", func() {
 					inResponse, inErr = command.Run(destDir, inRequest)
-					contents, err := ioutil.ReadFile(path.Join(destDir, "tag"))
+					contents, err := os.ReadFile(path.Join(destDir, "tag"))
 					Ω(err).ShouldNot(HaveOccurred())
 					Ω(string(contents)).Should(Equal("package-0.35.0"))
-					contents, err = ioutil.ReadFile(path.Join(destDir, "version"))
+					contents, err = os.ReadFile(path.Join(destDir, "version"))
 					Ω(err).ShouldNot(HaveOccurred())
 					Ω(string(contents)).Should(Equal("0.35.0"))
 				})

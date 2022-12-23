@@ -1,7 +1,7 @@
 package resource_test
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -19,7 +19,7 @@ type ReleaseAsset struct {
 }
 
 func file(path, contents string) {
-	Ω(ioutil.WriteFile(path, []byte(contents), 0644)).Should(Succeed())
+	Ω(os.WriteFile(path, []byte(contents), 0644)).Should(Succeed())
 }
 
 var _ = Describe("Out Command", func() {
@@ -34,9 +34,9 @@ var _ = Describe("Out Command", func() {
 		var err error
 
 		gitlabClient = &fakes.FakeGitLab{}
-		command = resource.NewOutCommand(gitlabClient, ioutil.Discard)
+		command = resource.NewOutCommand(gitlabClient, io.Discard)
 
-		sourcesDir, err = ioutil.TempDir("", "gitlab-release")
+		sourcesDir, err = os.MkdirTemp("", "gitlab-release")
 		Ω(err).ShouldNot(HaveOccurred())
 
 		gitlabClient.CreateReleaseStub = func(name string, tag string, body *string) (*gitlab.Release, error) {
