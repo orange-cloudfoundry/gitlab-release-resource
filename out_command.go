@@ -103,7 +103,7 @@ func (c *OutCommand) Run(sourceDir string, request OutRequest) (OutResponse, err
 		body = &bodyVal
 	}
 
-	// ensure tag exist, create from commitish if needed
+	// ensure the tag exists, create from commitish if needed
 	_, err = c.ensureTag(tag_name, filepath.Join(sourceDir, params.CommitishPath))
 	if err != nil {
 		if err != nil {
