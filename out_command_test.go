@@ -1,8 +1,7 @@
 package resource_test
 
 import (
-	// "errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -11,16 +10,12 @@ import (
 
 	"github.com/xanzy/go-gitlab"
 
-	"github.com/edtan/gitlab-release-resource"
-	"github.com/edtan/gitlab-release-resource/fakes"
+	"github.com/orange-cloudfoundry/gitlab-release-resource"
+	"github.com/orange-cloudfoundry/gitlab-release-resource/fakes"
 )
 
-type ReleaseAsset struct {
-	Links []*gitlab.ReleaseLink `json:"links"`
-}
-
 func file(path, contents string) {
-	Ω(ioutil.WriteFile(path, []byte(contents), 0644)).Should(Succeed())
+	Ω(os.WriteFile(path, []byte(contents), 0644)).Should(Succeed())
 }
 
 var _ = Describe("Out Command", func() {
@@ -35,9 +30,9 @@ var _ = Describe("Out Command", func() {
 		var err error
 
 		gitlabClient = &fakes.FakeGitLab{}
-		command = resource.NewOutCommand(gitlabClient, ioutil.Discard)
+		command = resource.NewOutCommand(gitlabClient, io.Discard)
 
-		sourcesDir, err = ioutil.TempDir("", "gitlab-release")
+		sourcesDir, err = os.MkdirTemp("", "gitlab-release")
 		Ω(err).ShouldNot(HaveOccurred())
 
 		gitlabClient.CreateReleaseStub = func(name string, tag string, body *string) (*gitlab.Release, error) {
@@ -54,7 +49,7 @@ var _ = Describe("Out Command", func() {
 		gitlabClient.CreateTagStub = func(name string, ref string) (*gitlab.Tag, error) {
 			return &gitlab.Tag{
 				Commit: &gitlab.Commit{
-					ID: ref,
+					ID:      ref,
 					ShortID: ref,
 				},
 			}, nil
@@ -76,7 +71,7 @@ var _ = Describe("Out Command", func() {
 
 		gitlabClient.CreateReleaseLinkStub = func(tag string, name string, url string) (*gitlab.ReleaseLink, error) {
 			return &gitlab.ReleaseLink{
-				URL: url,
+				URL:  url,
 				Name: name,
 			}, nil
 		}
@@ -93,32 +88,32 @@ var _ = Describe("Out Command", func() {
 
 	Context("when the release has already been created", func() {
 		assetsLinks1 := []*gitlab.ReleaseLink{
-			&gitlab.ReleaseLink{
+			{
 				ID:   456789,
 				Name: "unicorns.txt",
 			},
-			&gitlab.ReleaseLink{
-				ID:    3450798,
-				Name:  "rainbows.txt",
+			{
+				ID:   3450798,
+				Name: "rainbows.txt",
 			},
 		}
 
 		assetsLinks2 := []*gitlab.ReleaseLink{
-			&gitlab.ReleaseLink{
+			{
 				ID:   23,
 				Name: "rainbow.txt",
 			},
 		}
 
 		existingReleases := []*gitlab.Release{
-			&gitlab.Release{
-				TagName: "v0.3.12",
-				Name:    "v0.3.12-name",
+			{
+				TagName:     "v0.3.12",
+				Name:        "v0.3.12-name",
 				Description: "basic body1",
 			},
-			&gitlab.Release{
-				TagName: "tag2",
-				Name:    "name2",
+			{
+				TagName:     "tag2",
+				Name:        "name2",
 				Description: "basic body2",
 			},
 		}
@@ -152,9 +147,9 @@ var _ = Describe("Out Command", func() {
 
 			namePath := filepath.Join(sourcesDir, "name")
 			bodyPath := filepath.Join(sourcesDir, "body")
-			tagPath  := filepath.Join(sourcesDir, "tag")
+			tagPath := filepath.Join(sourcesDir, "tag")
 
-			file(tagPath,  "v0.3.12")
+			file(tagPath, "v0.3.12")
 			file(namePath, "v0.3.12-newname")
 			file(bodyPath, "this is a great release")
 
@@ -273,9 +268,9 @@ var _ = Describe("Out Command", func() {
 					outResponse, err := command.Run(sourcesDir, request)
 					Ω(err).ShouldNot(HaveOccurred())
 					Ω(outResponse.Metadata).Should(ConsistOf(
-						resource.MetadataPair{Name: "tag",        Value: "v0.3.13"},
-						resource.MetadataPair{Name: "name",       Value: "v0.3.13"},
-						resource.MetadataPair{Name: "body",       Value: "*markdown*", Markdown: true},
+						resource.MetadataPair{Name: "tag", Value: "v0.3.13"},
+						resource.MetadataPair{Name: "name", Value: "v0.3.13"},
+						resource.MetadataPair{Name: "body", Value: "*markdown*", Markdown: true},
 						resource.MetadataPair{Name: "commit_sha", Value: "a2f4a3"},
 					))
 				})
@@ -329,7 +324,7 @@ var _ = Describe("Out Command", func() {
 					_, err := command.Run(sourcesDir, request)
 					Ω(err).ShouldNot(HaveOccurred())
 					Ω(gitlabClient.CreateReleaseCallCount()).Should(Equal(1))
-					name, tag, _  := gitlabClient.CreateReleaseArgsForCall(0)
+					name, tag, _ := gitlabClient.CreateReleaseArgsForCall(0)
 					Ω(name).Should(Equal("v0.3.13"))
 					Ω(tag).Should(Equal("v0.3.13"))
 				})
@@ -369,8 +364,5 @@ var _ = Describe("Out Command", func() {
 			})
 		})
 	})
-
-
-
 
 })

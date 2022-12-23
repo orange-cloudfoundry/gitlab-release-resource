@@ -3,7 +3,7 @@ package resource_test
 import (
 	"net/http"
 
-	. "github.com/edtan/gitlab-release-resource"
+	. "github.com/orange-cloudfoundry/gitlab-release-resource"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -91,7 +91,6 @@ var _ = Describe("GitLab Client", func() {
 		})
 	})
 
-
 	Describe("GetTag", func() {
 		BeforeEach(func() {
 			source = Source{
@@ -120,7 +119,7 @@ var _ = Describe("GitLab Client", func() {
 		})
 
 		Context("The tag does not exist", func() {
-			BeforeEach(func () {
+			BeforeEach(func() {
 				server.AppendHandlers(
 					ghttp.CombineHandlers(
 						ghttp.VerifyRequest("GET", "/api/v4/projects/concourse/repository/tags/some-tag"),

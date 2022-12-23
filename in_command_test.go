@@ -1,48 +1,44 @@
 package resource_test
 
 import (
-	"errors"
 	"encoding/json"
-	"io/ioutil"
+	"errors"
+	"io"
 	"os"
 	"path"
-
-	// "path"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	// "github.com/onsi/gomega/ghttp"
-
 	"github.com/xanzy/go-gitlab"
 
-	"github.com/edtan/gitlab-release-resource"
-	"github.com/edtan/gitlab-release-resource/fakes"
+	"github.com/orange-cloudfoundry/gitlab-release-resource"
+	"github.com/orange-cloudfoundry/gitlab-release-resource/fakes"
 )
 
 var _ = Describe("In Command", func() {
 	var (
 		command      *resource.InCommand
 		gitlabClient *fakes.FakeGitLab
-		// gitlabServer *ghttp.Server
-		inRequest resource.InRequest
-		inResponse resource.InResponse
-		inErr      error
-		tmpDir  string
-		destDir string
+		inRequest    resource.InRequest
+		inResponse   resource.InResponse
+		inErr        error
+		tmpDir       string
+		destDir      string
 	)
 
 	BeforeEach(func() {
 		var err error
 		gitlabClient = &fakes.FakeGitLab{}
-		// gitlabServer = ghttp.NewServer()
-		command = resource.NewInCommand(gitlabClient, ioutil.Discard)
-		tmpDir, err = ioutil.TempDir("", "gitlab-release")
+		command = resource.NewInCommand(gitlabClient, io.Discard)
+		inErr = nil
+		tmpDir, err = os.MkdirTemp("", "gitlab-release")
 		Ω(err).ShouldNot(HaveOccurred())
 		destDir = filepath.Join(tmpDir, "destination")
 		gitlabClient.DownloadProjectFileReturns(nil)
 		inRequest = resource.InRequest{}
+		inResponse = resource.InResponse{}
 	})
 
 	AfterEach(func() {
@@ -51,17 +47,17 @@ var _ = Describe("In Command", func() {
 
 	buildRelease := func(tag, sha string) *gitlab.Release {
 		r := &gitlab.Release{
-			TagName: tag,
-			Name:    tag,
+			TagName:     tag,
+			Name:        tag,
 			Description: "*markdown*",
 			Commit: gitlab.Commit{
 				ID: sha,
 			},
 		}
 		r.Assets.Links = []*gitlab.ReleaseLink{
-			{ ID: 1, Name: "example.txt", URL: "example.txt" },
-			{ ID: 2, Name: "example.rtf", URL: "example.rtf" },
-			{ ID: 3, Name: "example.png", URL: "example.png" },
+			{ID: 1, Name: "example.txt", URL: "example.txt"},
+			{ID: 2, Name: "example.rtf", URL: "example.rtf"},
+			{ID: 3, Name: "example.png", URL: "example.png"},
 		}
 		data := []byte(`
     [
@@ -75,7 +71,6 @@ var _ = Describe("In Command", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		return r
 	}
-
 
 	Context("when a tagged release is found", func() {
 		BeforeEach(func() {
@@ -101,7 +96,7 @@ var _ = Describe("In Command", func() {
 				inResponse, inErr = command.Run(destDir, inRequest)
 				Ω(inErr).ShouldNot(HaveOccurred())
 				Ω(inResponse.Version).Should(Equal(resource.Version{
-					Tag: "v0.35.0",
+					Tag:       "v0.35.0",
 					CommitSHA: "abc123",
 				}))
 			})
@@ -110,15 +105,16 @@ var _ = Describe("In Command", func() {
 				inResponse, inErr = command.Run(destDir, inRequest)
 				Ω(inErr).ShouldNot(HaveOccurred())
 				Ω(inResponse.Metadata).Should(ConsistOf([]resource.MetadataPair{
-					{ Name: "name", Value: "v0.35.0" },
-					{ Name: "tag",     Value: "v0.35.0" },
-					{ Name: "commit_sha",  Value: "abc123" },
-					{ Name: "body",  Value: "*markdown*", Markdown: true },
+					{Name: "name", Value: "v0.35.0"},
+					{Name: "tag", Value: "v0.35.0"},
+					{Name: "commit_sha", Value: "abc123"},
+					{Name: "body", Value: "*markdown*", Markdown: true},
 				}))
 			})
 
 			It("calls #GetRelease with the correct arguments", func() {
-				command.Run(destDir, inRequest)
+				inResponse, inErr = command.Run(destDir, inRequest)
+				Ω(inErr).ShouldNot(HaveOccurred())
 				Ω(gitlabClient.GetReleaseCallCount()).Should(Equal(1))
 				Ω(gitlabClient.GetReleaseArgsForCall(0)).Should(Equal("v0.35.0"))
 			})
@@ -139,23 +135,22 @@ var _ = Describe("In Command", func() {
 			It("does create the body, tag and version files", func() {
 				inResponse, inErr = command.Run(destDir, inRequest)
 
-				contents, err := ioutil.ReadFile(path.Join(destDir, "tag"))
+				contents, err := os.ReadFile(path.Join(destDir, "tag"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contents)).Should(Equal("v0.35.0"))
 
-				contents, err = ioutil.ReadFile(path.Join(destDir, "version"))
+				contents, err = os.ReadFile(path.Join(destDir, "version"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contents)).Should(Equal("0.35.0"))
 
-				contents, err = ioutil.ReadFile(path.Join(destDir, "commit_sha"))
+				contents, err = os.ReadFile(path.Join(destDir, "commit_sha"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contents)).Should(Equal("abc123"))
 
-				contents, err = ioutil.ReadFile(path.Join(destDir, "body"))
+				contents, err = os.ReadFile(path.Join(destDir, "body"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contents)).Should(Equal("*markdown*"))
 			})
-
 
 			Context("when there is a custom tag filter", func() {
 				BeforeEach(func() {
@@ -172,10 +167,10 @@ var _ = Describe("In Command", func() {
 
 				It("does create the body, tag and version files", func() {
 					inResponse, inErr = command.Run(destDir, inRequest)
-					contents, err := ioutil.ReadFile(path.Join(destDir, "tag"))
+					contents, err := os.ReadFile(path.Join(destDir, "tag"))
 					Ω(err).ShouldNot(HaveOccurred())
 					Ω(string(contents)).Should(Equal("package-0.35.0"))
-					contents, err = ioutil.ReadFile(path.Join(destDir, "version"))
+					contents, err = os.ReadFile(path.Join(destDir, "version"))
 					Ω(err).ShouldNot(HaveOccurred())
 					Ω(string(contents)).Should(Equal("0.35.0"))
 				})
@@ -209,7 +204,6 @@ var _ = Describe("In Command", func() {
 				arg1, arg2 = gitlabClient.DownloadProjectFileArgsForCall(1)
 				Ω(arg1).Should(Equal("example.rtf"))
 				Ω(arg2).Should(Equal(path.Join(destDir, "example.rtf")))
-
 
 				arg1, arg2 = gitlabClient.DownloadProjectFileArgsForCall(2)
 				Ω(arg1).Should(Equal("example.png"))
@@ -330,6 +324,22 @@ var _ = Describe("In Command", func() {
 
 		It("returns the error", func() {
 			Ω(inErr).Should(Equal(disaster))
+		})
+	})
+
+	Context("with incomplete input JSON", func() {
+		Context("is missing version", func() {
+			It("complain about it", func() {
+				inResponse, inErr = command.Run(destDir, inRequest)
+				Ω(inErr).Should(HaveOccurred())
+			})
+		})
+		Context("is missing version tag", func() {
+			It("complain about it", func() {
+				inRequest.Version = &resource.Version{}
+				inResponse, inErr = command.Run(destDir, inRequest)
+				Ω(inErr).Should(HaveOccurred())
+			})
 		})
 	})
 })

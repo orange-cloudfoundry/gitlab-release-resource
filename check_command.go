@@ -2,6 +2,7 @@ package resource
 
 import (
 	"sort"
+
 	"github.com/cppforlife/go-semi-semantic/version"
 	"github.com/xanzy/go-gitlab"
 )
@@ -19,7 +20,7 @@ func NewCheckCommand(gitlab GitLab) *CheckCommand {
 func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 	versionParser, err := newVersionParser(request.Source.TagFilter)
 
-	// fetch available releaes
+	// fetch available releases
 	releases, err := c.gitlab.ListReleases()
 	if err != nil {
 		return []Version{}, err
@@ -38,15 +39,15 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 		if err != nil {
 			continue
 		}
-		// when given, keep only releases greater-or-equal than target version
-		if ((request.Version == Version{}) || !current.IsLt(targetVersion)) {
+		// when given, keep only releases greater-or-equal than the target version
+		if (request.Version == Version{}) || !current.IsLt(targetVersion) {
 			filteredReleases = append(filteredReleases, r)
 		}
 	}
 
 	// sort releases from older to newer
 	sort.Slice(filteredReleases, func(i, j int) bool {
-		// errors ingored since has already been filtered out by regexp
+		// errors ignored since has already been filtered out by regexp
 		first, _ := version.NewVersionFromString(versionParser.parse(filteredReleases[i].Name))
 		second, _ := version.NewVersionFromString(versionParser.parse(filteredReleases[j].Name))
 		return first.IsLt(second)
@@ -58,7 +59,7 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 	}
 
 	// first check, no target version given, reply last available release
-	latestRelease := filteredReleases[len(filteredReleases) - 1]
+	latestRelease := filteredReleases[len(filteredReleases)-1]
 	if (request.Version == Version{}) {
 		return []Version{versionFromRelease(latestRelease)}, nil
 	}

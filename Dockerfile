@@ -2,6 +2,7 @@ FROM golang:1 as builder
 COPY . /src
 WORKDIR /src
 ENV CGO_ENABLED 0
+ENV GOFLAGS -ldflags=-s -w
 RUN go get -d ./...
 RUN go build -o /assets/in ./cmd/in
 RUN go build -o /assets/out ./cmd/out

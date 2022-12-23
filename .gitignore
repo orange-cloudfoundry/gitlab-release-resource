@@ -2,3 +2,6 @@
 cmd/out/out
 cmd/in/in
 cmd/check/check
+/check
+/in
+/out

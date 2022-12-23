@@ -3,7 +3,6 @@ package resource
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,18 +13,12 @@ type InCommand struct {
 	writer io.Writer
 }
 
-type attachment struct {
-	Name string
-	URL  string
-}
-
 func NewInCommand(gitlab GitLab, writer io.Writer) *InCommand {
 	return &InCommand{
 		gitlab: gitlab,
 		writer: writer,
 	}
 }
-
 
 func (c *InCommand) matchAsset(name string, globs []string) bool {
 	if len(globs) == 0 {
@@ -55,6 +48,14 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 		return InResponse{}, err
 	}
 
+	if request.Version == nil {
+		return InResponse{}, errors.New("missing required Version")
+	}
+
+	if request.Version.Tag == "" {
+		return InResponse{}, errors.New("missing required Version Tag")
+	}
+
 	release, err := c.gitlab.GetRelease(request.Version.Tag)
 	if err != nil {
 		if errors.Is(err, NotFound) {
@@ -64,7 +65,7 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 	}
 
 	tagPath := filepath.Join(destDir, "tag")
-	err = ioutil.WriteFile(tagPath, []byte(release.TagName), 0644)
+	err = os.WriteFile(tagPath, []byte(release.TagName), 0644)
 	if err != nil {
 		return InResponse{}, err
 	}
@@ -75,31 +76,31 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 	}
 	version := versionParser.parse(release.TagName)
 	versionPath := filepath.Join(destDir, "version")
-	err = ioutil.WriteFile(versionPath, []byte(version), 0644)
+	err = os.WriteFile(versionPath, []byte(version), 0644)
 	if err != nil {
 		return InResponse{}, err
 	}
 
 	commitPath := filepath.Join(destDir, "commit_sha")
-	err = ioutil.WriteFile(commitPath, []byte(release.Commit.ID), 0644)
+	err = os.WriteFile(commitPath, []byte(release.Commit.ID), 0644)
 	if err != nil {
 		return InResponse{}, err
 	}
 
 	body := release.Description
 	bodyPath := filepath.Join(destDir, "body")
-	err = ioutil.WriteFile(bodyPath, []byte(body), 0644)
+	err = os.WriteFile(bodyPath, []byte(body), 0644)
 	if err != nil {
 		return InResponse{}, err
 	}
 
 	for _, asset := range release.Assets.Links {
-		path := filepath.Join(destDir, asset.Name)
+		destPath := filepath.Join(destDir, asset.Name)
 		if !c.matchAsset(asset.Name, request.Params.Globs) {
 			continue
 		}
 
-		err := c.gitlab.DownloadProjectFile(asset.URL, path)
+		err := c.gitlab.DownloadProjectFile(asset.URL, destPath)
 		if err != nil {
 			return InResponse{}, err
 		}
@@ -121,8 +122,8 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 		}
 
 		name := path.Base(source.URL)
-		path := filepath.Join(destDir, name)
-		err := c.gitlab.DownloadProjectFile(source.URL, path)
+		destPath := filepath.Join(destDir, name)
+		err := c.gitlab.DownloadProjectFile(source.URL, destPath)
 		if err != nil {
 			return InResponse{}, err
 		}
