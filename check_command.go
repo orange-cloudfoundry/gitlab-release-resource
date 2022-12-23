@@ -2,6 +2,7 @@ package resource
 
 import (
 	"sort"
+
 	"github.com/cppforlife/go-semi-semantic/version"
 	"github.com/xanzy/go-gitlab"
 )
@@ -39,7 +40,7 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 			continue
 		}
 		// when given, keep only releases greater-or-equal than target version
-		if ((request.Version == Version{}) || !current.IsLt(targetVersion)) {
+		if (request.Version == Version{}) || !current.IsLt(targetVersion) {
 			filteredReleases = append(filteredReleases, r)
 		}
 	}
@@ -58,7 +59,7 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 	}
 
 	// first check, no target version given, reply last available release
-	latestRelease := filteredReleases[len(filteredReleases) - 1]
+	latestRelease := filteredReleases[len(filteredReleases)-1]
 	if (request.Version == Version{}) {
 		return []Version{versionFromRelease(latestRelease)}, nil
 	}

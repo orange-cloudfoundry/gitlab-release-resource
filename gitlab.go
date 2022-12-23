@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -13,8 +14,6 @@ import (
 	"strings"
 
 	"golang.org/x/oauth2"
-
-	"context"
 
 	"github.com/xanzy/go-gitlab"
 )
@@ -40,7 +39,7 @@ type GitLab interface {
 
 	GetReleaseLinks(tag string) ([]*gitlab.ReleaseLink, error)
 	CreateReleaseLink(tag string, name string, url string) (*gitlab.ReleaseLink, error)
-	DeleteReleaseLink(tag string, links *gitlab.ReleaseLink) (error)
+	DeleteReleaseLink(tag string, links *gitlab.ReleaseLink) error
 }
 
 const (
@@ -117,8 +116,6 @@ func (g *GitlabClient) ListTags() ([]*gitlab.Tag, error) {
 
 	return allTags, nil
 }
-
-
 
 func (g *GitlabClient) ListReleases() ([]*gitlab.Release, error) {
 	var allReleases []*gitlab.Release
@@ -262,8 +259,8 @@ func (g *GitlabClient) CreateTag(tag_name string, ref string) (*gitlab.Tag, erro
 
 func (g *GitlabClient) CreateRelease(name string, tag string, description *string) (*gitlab.Release, error) {
 	opt := &gitlab.CreateReleaseOptions{
-		Name: gitlab.String(name),
-		TagName: gitlab.String(tag),
+		Name:        gitlab.String(name),
+		TagName:     gitlab.String(tag),
 		Description: description,
 	}
 
@@ -285,7 +282,7 @@ func (g *GitlabClient) GetReleaseLinks(tag string) ([]*gitlab.ReleaseLink, error
 	links := []*gitlab.ReleaseLink{}
 	opt := &gitlab.ListReleaseLinksOptions{
 		PerPage: 100,
-		Page: 1,
+		Page:    1,
 	}
 	for {
 		items, resp, err := g.client.ReleaseLinks.ListReleaseLinks(g.repository, tag, opt)
@@ -302,14 +299,13 @@ func (g *GitlabClient) GetReleaseLinks(tag string) ([]*gitlab.ReleaseLink, error
 	return links, nil
 }
 
-func (g *GitlabClient) DeleteReleaseLink(tag string, link *gitlab.ReleaseLink) (error) {
+func (g *GitlabClient) DeleteReleaseLink(tag string, link *gitlab.ReleaseLink) error {
 	_, _, err := g.client.ReleaseLinks.DeleteReleaseLink(g.repository, tag, link.ID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
 
 func (g *GitlabClient) CreateReleaseLink(tag string, name string, url string) (*gitlab.ReleaseLink, error) {
 	opt := &gitlab.CreateReleaseLinkOptions{
@@ -326,7 +322,7 @@ func (g *GitlabClient) CreateReleaseLink(tag string, name string, url string) (*
 
 func (g *GitlabClient) UpdateRelease(name string, tag string, description *string) (*gitlab.Release, error) {
 	opt := &gitlab.UpdateReleaseOptions{
-		Name: gitlab.String(name),
+		Name:        gitlab.String(name),
 		Description: description,
 	}
 

@@ -26,7 +26,6 @@ func NewInCommand(gitlab GitLab, writer io.Writer) *InCommand {
 	}
 }
 
-
 func (c *InCommand) matchAsset(name string, globs []string) bool {
 	if len(globs) == 0 {
 		return true

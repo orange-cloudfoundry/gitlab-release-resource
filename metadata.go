@@ -33,11 +33,11 @@ func metadataFromTag(tag *gitlab.Tag) []MetadataPair {
 
 func metadataFromRelease(release *gitlab.Release) []MetadataPair {
 	metadata := []MetadataPair{
-		MetadataPair{
+		{
 			Name:  "name",
 			Value: release.Name,
 		},
-		MetadataPair{
+		{
 			Name:  "tag",
 			Value: release.TagName,
 		},
