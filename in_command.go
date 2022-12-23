@@ -13,11 +13,6 @@ type InCommand struct {
 	writer io.Writer
 }
 
-type attachment struct {
-	Name string
-	URL  string
-}
-
 func NewInCommand(gitlab GitLab, writer io.Writer) *InCommand {
 	return &InCommand{
 		gitlab: gitlab,

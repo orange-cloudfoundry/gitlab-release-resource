@@ -14,10 +14,6 @@ import (
 	"github.com/orange-cloudfoundry/gitlab-release-resource/fakes"
 )
 
-type ReleaseAsset struct {
-	Links []*gitlab.ReleaseLink `json:"links"`
-}
-
 func file(path, contents string) {
 	Ω(os.WriteFile(path, []byte(contents), 0644)).Should(Succeed())
 }
