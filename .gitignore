@@ -5,3 +5,4 @@ cmd/check/check
 /check
 /in
 /out
+/dist
