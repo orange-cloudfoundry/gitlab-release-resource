@@ -19,12 +19,6 @@ var _ = Describe("GitLab Client", func() {
 
 	BeforeEach(func() {
 		server = ghttp.NewServer()
-		server.AppendHandlers(
-			ghttp.CombineHandlers(
-				ghttp.VerifyRequest("GET", "/api/v4/"),
-				ghttp.RespondWith(200, "[]"),
-			),
-		)
 	})
 
 	JustBeforeEach(func() {
