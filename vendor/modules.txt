@@ -73,7 +73,6 @@ github.com/onsi/gomega/types
 github.com/xanzy/go-gitlab
 # golang.org/x/net v0.15.0
 ## explicit; go 1.17
-golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
@@ -108,7 +107,7 @@ golang.org/x/text/transform
 # golang.org/x/time v0.3.0
 ## explicit
 golang.org/x/time/rate
-# google.golang.org/appengine v1.6.7
+# google.golang.org/appengine v1.6.8
 ## explicit; go 1.11
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/base
