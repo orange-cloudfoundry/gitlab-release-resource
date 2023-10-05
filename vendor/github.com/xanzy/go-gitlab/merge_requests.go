@@ -493,24 +493,23 @@ func (s *MergeRequestsService) GetMergeRequestChanges(pid interface{}, mergeRequ
 	return m, resp, nil
 }
 
-// ListMergeRequesDiffsOptions represents the available ListMergeRequesDiffs()
+// ListMergeRequestDiffsOptions represents the available ListMergeRequesDiffs()
 // options.
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/merge_requests.html#list-merge-request-diffs
-type ListMergeRequesDiffsOptions ListOptions
+type ListMergeRequestDiffsOptions ListOptions
 
-// ListMergeRequesDiffs List diffs of the files changed in a merge request
+// ListMergeRequestDiffs List diffs of the files changed in a merge request
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/merge_requests.html#list-merge-request-diffs
-func (s *MergeRequestsService) ListMergeRequesDiffs(pid interface{}, mergeRequest int, opt *ListMergeRequesDiffsOptions, options ...RequestOptionFunc) ([]*MergeRequestDiff, *Response, error) {
+func (s *MergeRequestsService) ListMergeRequestDiffs(pid interface{}, mergeRequest int, opt *ListMergeRequestDiffsOptions, options ...RequestOptionFunc) ([]*MergeRequestDiff, *Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	u := fmt.Sprintf("/projects/%s/merge_requests/%d/diffs", PathEscape(project), mergeRequest)
+	u := fmt.Sprintf("projects/%s/merge_requests/%d/diffs", PathEscape(project), mergeRequest)
 
 	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
 	if err != nil {
