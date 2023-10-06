@@ -12,9 +12,9 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.10
 	github.com/xanzy/go-gitlab v0.92.1
-	golang.org/x/net v0.15.0 // indirect
-	golang.org/x/oauth2 v0.12.0
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/net v0.16.0 // indirect
+	golang.org/x/oauth2 v0.13.0
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
