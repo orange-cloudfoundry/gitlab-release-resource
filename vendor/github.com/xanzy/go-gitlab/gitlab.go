@@ -105,6 +105,7 @@ type Client struct {
 
 	// Services used for talking to different parts of the GitLab API.
 	AccessRequests               *AccessRequestsService
+	Appearance                   *AppearanceService
 	Applications                 *ApplicationsService
 	AuditEvents                  *AuditEventsService
 	Avatar                       *AvatarRequestsService
@@ -201,6 +202,7 @@ type Client struct {
 	Repositories                 *RepositoriesService
 	RepositoryFiles              *RepositoryFilesService
 	RepositorySubmodules         *RepositorySubmodulesService
+	ResourceIterationEvents      *ResourceIterationEventsService
 	ResourceLabelEvents          *ResourceLabelEventsService
 	ResourceMilestoneEvents      *ResourceMilestoneEventsService
 	ResourceStateEvents          *ResourceStateEventsService
@@ -328,6 +330,7 @@ func newClient(options ...ClientOptionFunc) (*Client, error) {
 
 	// Create all the public services.
 	c.AccessRequests = &AccessRequestsService{client: c}
+	c.Appearance = &AppearanceService{client: c}
 	c.Applications = &ApplicationsService{client: c}
 	c.AuditEvents = &AuditEventsService{client: c}
 	c.Avatar = &AvatarRequestsService{client: c}
@@ -424,6 +427,7 @@ func newClient(options ...ClientOptionFunc) (*Client, error) {
 	c.Repositories = &RepositoriesService{client: c}
 	c.RepositoryFiles = &RepositoryFilesService{client: c}
 	c.RepositorySubmodules = &RepositorySubmodulesService{client: c}
+	c.ResourceIterationEvents = &ResourceIterationEventsService{client: c}
 	c.ResourceLabelEvents = &ResourceLabelEventsService{client: c}
 	c.ResourceMilestoneEvents = &ResourceMilestoneEventsService{client: c}
 	c.ResourceStateEvents = &ResourceStateEventsService{client: c}
@@ -813,6 +817,7 @@ func (c *Client) Do(req *retryablehttp.Request, v interface{}) (*Response, error
 		return c.Do(req, v)
 	}
 	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
 
 	// If not yet configured, try to configure the rate limiter
 	// using the response headers we just received. Fail silently

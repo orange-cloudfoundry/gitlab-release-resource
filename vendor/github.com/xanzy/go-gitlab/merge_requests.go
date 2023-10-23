@@ -202,6 +202,7 @@ type ListMergeRequestsOptions struct {
 	Scope                  *string           `url:"scope,omitempty" json:"scope,omitempty"`
 	AuthorID               *int              `url:"author_id,omitempty" json:"author_id,omitempty"`
 	AuthorUsername         *string           `url:"author_username,omitempty" json:"author_username,omitempty"`
+	NotAuthorUsername      *string           `url:"not[author_username],omitempty" json:"not[author_username],omitempty"`
 	AssigneeID             *AssigneeIDValue  `url:"assignee_id,omitempty" json:"assignee_id,omitempty"`
 	ApproverIDs            *ApproverIDsValue `url:"approver_ids,omitempty" json:"approver_ids,omitempty"`
 	ApprovedByIDs          *ApproverIDsValue `url:"approved_by_ids,omitempty" json:"approved_by_ids,omitempty"`
@@ -262,6 +263,7 @@ type ListProjectMergeRequestsOptions struct {
 	Scope                  *string           `url:"scope,omitempty" json:"scope,omitempty"`
 	AuthorID               *int              `url:"author_id,omitempty" json:"author_id,omitempty"`
 	AuthorUsername         *string           `url:"author_username,omitempty" json:"author_username,omitempty"`
+	NotAuthorUsername      *string           `url:"not[author_username],omitempty" json:"not[author_username],omitempty"`
 	AssigneeID             *AssigneeIDValue  `url:"assignee_id,omitempty" json:"assignee_id,omitempty"`
 	ApproverIDs            *ApproverIDsValue `url:"approver_ids,omitempty" json:"approver_ids,omitempty"`
 	ApprovedByIDs          *ApproverIDsValue `url:"approved_by_ids,omitempty" json:"approved_by_ids,omitempty"`
@@ -323,6 +325,7 @@ type ListGroupMergeRequestsOptions struct {
 	Scope                  *string           `url:"scope,omitempty" json:"scope,omitempty"`
 	AuthorID               *int              `url:"author_id,omitempty" json:"author_id,omitempty"`
 	AuthorUsername         *string           `url:"author_username,omitempty" json:"author_username,omitempty"`
+	NotAuthorUsername      *string           `url:"not[author_username],omitempty" json:"not[author_username],omitempty"`
 	AssigneeID             *AssigneeIDValue  `url:"assignee_id,omitempty" json:"assignee_id,omitempty"`
 	ApproverIDs            *ApproverIDsValue `url:"approver_ids,omitempty" json:"approver_ids,omitempty"`
 	ApprovedByIDs          *ApproverIDsValue `url:"approved_by_ids,omitempty" json:"approved_by_ids,omitempty"`
@@ -468,7 +471,7 @@ type GetMergeRequestChangesOptions struct {
 // its files and changes.
 //
 // Deprecated: This endpoint has been replaced by
-// MergeRequestsService.ListMergeRequesDiffs()
+// MergeRequestsService.ListMergeRequestDiffs()
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/merge_requests.html#get-single-merge-request-changes
@@ -493,24 +496,23 @@ func (s *MergeRequestsService) GetMergeRequestChanges(pid interface{}, mergeRequ
 	return m, resp, nil
 }
 
-// ListMergeRequesDiffsOptions represents the available ListMergeRequesDiffs()
+// ListMergeRequestDiffsOptions represents the available ListMergeRequestDiffs()
 // options.
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/merge_requests.html#list-merge-request-diffs
-type ListMergeRequesDiffsOptions ListOptions
+type ListMergeRequestDiffsOptions ListOptions
 
-// ListMergeRequesDiffs List diffs of the files changed in a merge request
+// ListMergeRequestDiffs List diffs of the files changed in a merge request
 //
 // GitLab API docs:
 // https://docs.gitlab.com/ee/api/merge_requests.html#list-merge-request-diffs
-func (s *MergeRequestsService) ListMergeRequesDiffs(pid interface{}, mergeRequest int, opt *ListMergeRequesDiffsOptions, options ...RequestOptionFunc) ([]*MergeRequestDiff, *Response, error) {
+func (s *MergeRequestsService) ListMergeRequestDiffs(pid interface{}, mergeRequest int, opt *ListMergeRequestDiffsOptions, options ...RequestOptionFunc) ([]*MergeRequestDiff, *Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	u := fmt.Sprintf("/projects/%s/merge_requests/%d/diffs", PathEscape(project), mergeRequest)
+	u := fmt.Sprintf("projects/%s/merge_requests/%d/diffs", PathEscape(project), mergeRequest)
 
 	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
 	if err != nil {
