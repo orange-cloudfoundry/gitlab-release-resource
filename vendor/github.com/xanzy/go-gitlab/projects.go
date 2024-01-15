@@ -197,13 +197,14 @@ type ContainerExpirationPolicy struct {
 
 // ForkParent represents the parent project when this is a fork.
 type ForkParent struct {
-	HTTPURLToRepo     string `json:"http_url_to_repo"`
 	ID                int    `json:"id"`
 	Name              string `json:"name"`
 	NameWithNamespace string `json:"name_with_namespace"`
 	Path              string `json:"path"`
 	PathWithNamespace string `json:"path_with_namespace"`
+	HTTPURLToRepo     string `json:"http_url_to_repo"`
 	WebURL            string `json:"web_url"`
+	RepositoryStorage string `json:"repository_storage"`
 }
 
 // GroupAccess represents group access.
@@ -324,6 +325,8 @@ type ListProjectsOptions struct {
 	IDAfter                  *int              `url:"id_after,omitempty" json:"id_after,omitempty"`
 	IDBefore                 *int              `url:"id_before,omitempty" json:"id_before,omitempty"`
 	Imported                 *bool             `url:"imported,omitempty" json:"imported,omitempty"`
+	IncludeHidden            *bool             `url:"include_hidden,omitempty" json:"include_hidden,omitempty"`
+	IncludePendingDelete     *bool             `url:"include_pending_delete,omitempty" json:"include_pending_delete,omitempty"`
 	LastActivityAfter        *time.Time        `url:"last_activity_after,omitempty" json:"last_activity_after,omitempty"`
 	LastActivityBefore       *time.Time        `url:"last_activity_before,omitempty" json:"last_activity_before,omitempty"`
 	Membership               *bool             `url:"membership,omitempty" json:"membership,omitempty"`
@@ -859,6 +862,7 @@ type EditProjectOptions struct {
 	MergeRequestsTemplate                     *string                              `url:"merge_requests_template,omitempty" json:"merge_requests_template,omitempty"`
 	MergeTrainsEnabled                        *bool                                `url:"merge_trains_enabled,omitempty" json:"merge_trains_enabled,omitempty"`
 	Mirror                                    *bool                                `url:"mirror,omitempty" json:"mirror,omitempty"`
+	MirrorBranchRegex                         *string                              `url:"mirror_branch_regex,omitempty" json:"mirror_branch_regex,omitempty"`
 	MirrorOverwritesDivergedBranches          *bool                                `url:"mirror_overwrites_diverged_branches,omitempty" json:"mirror_overwrites_diverged_branches,omitempty"`
 	MirrorTriggerBuilds                       *bool                                `url:"mirror_trigger_builds,omitempty" json:"mirror_trigger_builds,omitempty"`
 	MirrorUserID                              *int                                 `url:"mirror_user_id,omitempty" json:"mirror_user_id,omitempty"`

@@ -103,6 +103,7 @@ type User struct {
 	UsingLicenseSeat               bool               `json:"using_license_seat"`
 	CustomAttributes               []*CustomAttribute `json:"custom_attributes"`
 	NamespaceID                    int                `json:"namespace_id"`
+	Locked                         bool               `json:"locked"`
 }
 
 // UserIdentity represents a user identity.
@@ -1301,6 +1302,38 @@ func (s *UsersService) CreatePersonalAccessToken(user int, opt *CreatePersonalAc
 	return t, resp, nil
 }
 
+// CreatePersonalAccessTokenForCurrentUserOptions represents the available
+// CreatePersonalAccessTokenForCurrentUser() options.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ee/api/users.html#create-a-personal-access-token-with-limited-scopes-for-the-currently-authenticated-user
+type CreatePersonalAccessTokenForCurrentUserOptions struct {
+	Name      *string   `url:"name,omitempty" json:"name,omitempty"`
+	Scopes    *[]string `url:"scopes,omitempty" json:"scopes,omitempty"`
+	ExpiresAt *ISOTime  `url:"expires_at,omitempty" json:"expires_at,omitempty"`
+}
+
+// CreatePersonalAccessTokenForCurrentUser creates a personal access token with limited scopes for the currently authenticated user.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ee/api/users.html#create-a-personal-access-token-with-limited-scopes-for-the-currently-authenticated-user
+func (s *UsersService) CreatePersonalAccessTokenForCurrentUser(opt *CreatePersonalAccessTokenForCurrentUserOptions, options ...RequestOptionFunc) (*PersonalAccessToken, *Response, error) {
+	u := "user/personal_access_tokens"
+
+	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	t := new(PersonalAccessToken)
+	resp, err := s.client.Do(req, &t)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return t, resp, nil
+}
+
 // UserActivity represents an entry in the user/activities response
 //
 // GitLab API docs:
@@ -1455,4 +1488,22 @@ func (s *UsersService) CreateUserRunner(opts *CreateUserRunnerOptions, options .
 	}
 
 	return r, resp, nil
+}
+
+// CreateServiceAccountUser creates a new service account user. Note only administrators can create new service account users.
+//
+// GitLab API docs: https://docs.gitlab.com/ee/api/users.html#create-service-account-user
+func (s *UsersService) CreateServiceAccountUser(options ...RequestOptionFunc) (*User, *Response, error) {
+	req, err := s.client.NewRequest(http.MethodPost, "service_accounts", nil, options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	usr := new(User)
+	resp, err := s.client.Do(req, usr)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return usr, resp, nil
 }
