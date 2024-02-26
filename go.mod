@@ -11,7 +11,7 @@ require (
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.30.0
-	github.com/xanzy/go-gitlab v0.95.2
+	github.com/xanzy/go-gitlab v0.98.0
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/oauth2 v0.16.0
 	golang.org/x/sys v0.16.0 // indirect
