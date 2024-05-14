@@ -104,7 +104,7 @@ var _ = Describe("GitLab Client", func() {
 
 			It("Returns a populated github.Tag", func() {
 				expectedTag := &gitlab.Tag{
-					Name: *gitlab.String("some-tag"),
+					Name: *gitlab.Ptr("some-tag"),
 				}
 				tag, err := client.GetTag("some-tag")
 				Ω(err).ShouldNot(HaveOccurred())

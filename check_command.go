@@ -19,6 +19,9 @@ func NewCheckCommand(gitlab GitLab) *CheckCommand {
 
 func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 	versionParser, err := newVersionParser(request.Source.TagFilter)
+	if err != nil {
+		return []Version{}, err
+	}
 
 	// fetch available releases
 	releases, err := c.gitlab.ListReleases()
