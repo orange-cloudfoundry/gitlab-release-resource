@@ -118,7 +118,7 @@ var _ = Describe("Out Command", func() {
 			},
 		}
 
-		// damn annonymous structs...
+		// damn anonymous structs...
 		existingReleases[0].Assets.Links = assetsLinks1
 		existingReleases[1].Assets.Links = assetsLinks2
 
