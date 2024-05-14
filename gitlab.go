@@ -61,6 +61,7 @@ func NewGitLabClient(source Source) (*GitlabClient, error) {
 		httpClient.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
+		// nolint:ineffassign,staticcheck
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 	}
 	httpClientOpt := gitlab.WithHTTPClient(httpClient)
