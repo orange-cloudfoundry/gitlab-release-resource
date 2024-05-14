@@ -96,8 +96,8 @@ func (g *GitlabClient) ListTags() ([]*gitlab.Tag, error) {
 			PerPage: 100,
 			Page:    1,
 		},
-		OrderBy: gitlab.String("updated"),
-		Sort:    gitlab.String("desc"),
+		OrderBy: gitlab.Ptr("updated"),
+		Sort:    gitlab.Ptr("desc"),
 	}
 
 	for {
@@ -153,8 +153,8 @@ func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 			PerPage: pageSize,
 			Page:    1,
 		},
-		OrderBy: gitlab.String("updated"),
-		Sort:    gitlab.String("desc"),
+		OrderBy: gitlab.Ptr("updated"),
+		Sort:    gitlab.Ptr("desc"),
 	}
 
 	var foundTag *gitlab.Tag
@@ -247,9 +247,9 @@ func (g *GitlabClient) GetRelease(tag_name string) (*gitlab.Release, error) {
 
 func (g *GitlabClient) CreateTag(tag_name string, ref string) (*gitlab.Tag, error) {
 	opt := &gitlab.CreateTagOptions{
-		TagName: gitlab.String(tag_name),
-		Ref:     gitlab.String(ref),
-		Message: gitlab.String(tag_name),
+		TagName: gitlab.Ptr(tag_name),
+		Ref:     gitlab.Ptr(ref),
+		Message: gitlab.Ptr(tag_name),
 	}
 
 	tag, _, err := g.client.Tags.CreateTag(g.repository, opt)
@@ -262,8 +262,8 @@ func (g *GitlabClient) CreateTag(tag_name string, ref string) (*gitlab.Tag, erro
 
 func (g *GitlabClient) CreateRelease(name string, tag string, description *string) (*gitlab.Release, error) {
 	opt := &gitlab.CreateReleaseOptions{
-		Name:        gitlab.String(name),
-		TagName:     gitlab.String(tag),
+		Name:        gitlab.Ptr(name),
+		TagName:     gitlab.Ptr(tag),
 		Description: description,
 	}
 
@@ -312,8 +312,8 @@ func (g *GitlabClient) DeleteReleaseLink(tag string, link *gitlab.ReleaseLink) e
 
 func (g *GitlabClient) CreateReleaseLink(tag string, name string, url string) (*gitlab.ReleaseLink, error) {
 	opt := &gitlab.CreateReleaseLinkOptions{
-		Name: gitlab.String(name),
-		URL:  gitlab.String(url),
+		Name: gitlab.Ptr(name),
+		URL:  gitlab.Ptr(url),
 	}
 	link, _, err := g.client.ReleaseLinks.CreateReleaseLink(g.repository, tag, opt)
 	if err != nil {
@@ -325,7 +325,7 @@ func (g *GitlabClient) CreateReleaseLink(tag string, name string, url string) (*
 
 func (g *GitlabClient) UpdateRelease(name string, tag string, description *string) (*gitlab.Release, error) {
 	opt := &gitlab.UpdateReleaseOptions{
-		Name:        gitlab.String(name),
+		Name:        gitlab.Ptr(name),
 		Description: description,
 	}
 
