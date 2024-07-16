@@ -5,12 +5,12 @@ go 1.22.3
 require (
 	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.6 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.33.1
-	github.com/xanzy/go-gitlab v0.105.0
+	github.com/xanzy/go-gitlab v0.107.0
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.20.0
 	golang.org/x/sys v0.20.0 // indirect
