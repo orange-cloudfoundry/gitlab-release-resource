@@ -1,6 +1,6 @@
 module github.com/orange-cloudfoundry/gitlab-release-resource
 
-go 1.22.3
+go 1.22.6
 
 require (
 	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4
