@@ -11,9 +11,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
-	"github.com/orange-cloudfoundry/gitlab-release-resource"
+	resource "github.com/orange-cloudfoundry/gitlab-release-resource"
 	"github.com/orange-cloudfoundry/gitlab-release-resource/fakes"
 )
 

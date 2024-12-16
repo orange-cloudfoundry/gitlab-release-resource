@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/cppforlife/go-semi-semantic/version"
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 type CheckCommand struct {

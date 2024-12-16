@@ -4,9 +4,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/orange-cloudfoundry/gitlab-release-resource"
+	resource "github.com/orange-cloudfoundry/gitlab-release-resource"
 	"github.com/orange-cloudfoundry/gitlab-release-resource/fakes"
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func v2r(versions []string) []*gitlab.Release {

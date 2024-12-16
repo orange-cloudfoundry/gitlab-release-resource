@@ -13,9 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"golang.org/x/oauth2"
-
-	"github.com/xanzy/go-gitlab"
 )
 
 var (

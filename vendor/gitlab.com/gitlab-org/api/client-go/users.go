@@ -1553,7 +1553,6 @@ func (s *UsersService) CreateUserRunner(opts *CreateUserRunnerOptions, options .
 	return r, resp, nil
 }
 
-
 // CreateServiceAccountUserOptions represents the available CreateServiceAccountUser() options.
 //
 // GitLab API docs: https://docs.gitlab.com/ee/api/user_service_accounts.html#create-a-service-account-user

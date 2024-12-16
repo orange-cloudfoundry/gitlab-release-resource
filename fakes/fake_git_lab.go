@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	resource "github.com/orange-cloudfoundry/gitlab-release-resource"
-	gitlab "github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 type FakeGitLab struct {

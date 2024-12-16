@@ -10,13 +10,14 @@ require (
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.36.1
-	github.com/xanzy/go-gitlab v0.115.0
 	golang.org/x/net v0.32.0 // indirect
 	golang.org/x/oauth2 v0.24.0
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 )
+
+require gitlab.com/gitlab-org/api/client-go v0.117.0
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect

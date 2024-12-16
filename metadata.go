@@ -1,6 +1,6 @@
 package resource
 
-import "github.com/xanzy/go-gitlab"
+import gitlab "gitlab.com/gitlab-org/api/client-go"
 
 func metadataFromRelease(release *gitlab.Release) []MetadataPair {
 	metadata := []MetadataPair{
