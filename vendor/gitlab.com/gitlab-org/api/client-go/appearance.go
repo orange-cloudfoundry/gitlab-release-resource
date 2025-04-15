@@ -18,16 +18,25 @@ package gitlab
 
 import "net/http"
 
-// AppearanceService handles communication with appearance of the Gitlab API.
-//
-// Gitlab API docs : https://docs.gitlab.com/ee/api/appearance.html
-type AppearanceService struct {
-	client *Client
-}
+type (
+	AppearanceServiceInterface interface {
+		GetAppearance(options ...RequestOptionFunc) (*Appearance, *Response, error)
+		ChangeAppearance(opt *ChangeAppearanceOptions, options ...RequestOptionFunc) (*Appearance, *Response, error)
+	}
+
+	// AppearanceService handles communication with appearance of the Gitlab API.
+	//
+	// Gitlab API docs: https://docs.gitlab.com/api/appearance/
+	AppearanceService struct {
+		client *Client
+	}
+)
+
+var _ AppearanceServiceInterface = (*AppearanceService)(nil)
 
 // Appearance represents a GitLab appearance.
 //
-// Gitlab API docs : https://docs.gitlab.com/ee/api/appearance.html
+// Gitlab API docs: https://docs.gitlab.com/api/appearance/
 type Appearance struct {
 	Title                       string `json:"title"`
 	Description                 string `json:"description"`
@@ -38,6 +47,7 @@ type Appearance struct {
 	Logo                        string `json:"logo"`
 	HeaderLogo                  string `json:"header_logo"`
 	Favicon                     string `json:"favicon"`
+	MemberGuidelines            string `json:"member_guidelines"`
 	NewProjectGuidelines        string `json:"new_project_guidelines"`
 	ProfileImageGuidelines      string `json:"profile_image_guidelines"`
 	HeaderMessage               string `json:"header_message"`
@@ -50,7 +60,7 @@ type Appearance struct {
 // GetAppearance gets the current appearance configuration of the GitLab instance.
 //
 // Gitlab API docs:
-// https://docs.gitlab.com/ee/api/appearance.html#get-current-appearance-configuration
+// https://docs.gitlab.com/api/appearance/#get-details-on-current-application-appearance
 func (s *AppearanceService) GetAppearance(options ...RequestOptionFunc) (*Appearance, *Response, error) {
 	req, err := s.client.NewRequest(http.MethodGet, "application/appearance", nil, options)
 	if err != nil {
@@ -69,7 +79,7 @@ func (s *AppearanceService) GetAppearance(options ...RequestOptionFunc) (*Appear
 // ChangeAppearanceOptions represents the available ChangeAppearance() options.
 //
 // GitLab API docs:
-// https://docs.gitlab.com/ee/api/appearance.html#change-appearance-configuration
+// https://docs.gitlab.com/api/appearance/#update-application-appearance
 type ChangeAppearanceOptions struct {
 	Title                       *string `url:"title,omitempty" json:"title,omitempty"`
 	Description                 *string `url:"description,omitempty" json:"description,omitempty"`
@@ -80,6 +90,7 @@ type ChangeAppearanceOptions struct {
 	Logo                        *string `url:"logo,omitempty" json:"logo,omitempty"`
 	HeaderLogo                  *string `url:"header_logo,omitempty" json:"header_logo,omitempty"`
 	Favicon                     *string `url:"favicon,omitempty" json:"favicon,omitempty"`
+	MemberGuidelines            *string `url:"member_guidelines,omitempty" json:"member_guidelines,omitempty"`
 	NewProjectGuidelines        *string `url:"new_project_guidelines,omitempty" json:"new_project_guidelines,omitempty"`
 	ProfileImageGuidelines      *string `url:"profile_image_guidelines,omitempty" json:"profile_image_guidelines,omitempty"`
 	HeaderMessage               *string `url:"header_message,omitempty" json:"header_message,omitempty"`
@@ -93,7 +104,7 @@ type ChangeAppearanceOptions struct {
 // ChangeAppearance changes the appearance configuration.
 //
 // Gitlab API docs:
-// https://docs.gitlab.com/ee/api/appearance.html#change-appearance-configuration
+// https://docs.gitlab.com/api/appearance/#update-application-appearance
 func (s *AppearanceService) ChangeAppearance(opt *ChangeAppearanceOptions, options ...RequestOptionFunc) (*Appearance, *Response, error) {
 	req, err := s.client.NewRequest(http.MethodPut, "application/appearance", opt, options)
 	if err != nil {

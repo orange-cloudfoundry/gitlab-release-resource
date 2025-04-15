@@ -24,13 +24,26 @@ import (
 	"time"
 )
 
-// ProjectMarkdownUploadsService handles communication with the project markdown uploads
-// related methods of the GitLab API.
-//
-// Gitlab API docs: https://docs.gitlab.com/ee/api/project_markdown_uploads.html
-type ProjectMarkdownUploadsService struct {
-	client *Client
-}
+type (
+	ProjectMarkdownUploadsServiceInterface interface {
+		UploadProjectMarkdown(pid interface{}, content io.Reader, filename string, options ...RequestOptionFunc) (*ProjectMarkdownUploadedFile, *Response, error)
+		ListProjectMarkdownUploads(pid interface{}, options ...RequestOptionFunc) ([]*ProjectMarkdownUpload, *Response, error)
+		DownloadProjectMarkdownUploadByID(pid interface{}, uploadID int, options ...RequestOptionFunc) ([]byte, *Response, error)
+		DownloadProjectMarkdownUploadBySecretAndFilename(pid interface{}, secret string, filename string, options ...RequestOptionFunc) ([]byte, *Response, error)
+		DeleteProjectMarkdownUploadByID(pid interface{}, uploadID int, options ...RequestOptionFunc) (*Response, error)
+		DeleteProjectMarkdownUploadBySecretAndFilename(pid interface{}, secret string, filename string, options ...RequestOptionFunc) (*Response, error)
+	}
+
+	// ProjectMarkdownUploadsService handles communication with the project markdown uploads
+	// related methods of the GitLab API.
+	//
+	// Gitlab API docs: https://docs.gitlab.com/ee/api/project_markdown_uploads.html
+	ProjectMarkdownUploadsService struct {
+		client *Client
+	}
+)
+
+var _ ProjectMarkdownUploadsServiceInterface = (*ProjectMarkdownUploadsService)(nil)
 
 // ProjectMarkdownUploadedFile represents a single project markdown uploaded file.
 //
@@ -65,24 +78,25 @@ func (m ProjectMarkdownUpload) String() string {
 //
 // GitLab docs:
 // https://docs.gitlab.com/ee/api/project_markdown_uploads.html#upload-a-file
-func (s *ProjectMarkdownUploadsService) UploadProjectMarkdown(pid interface{}, content io.Reader, options ...RequestOptionFunc) (*ProjectMarkdownUploadedFile, *Response, error) {
+func (s *ProjectMarkdownUploadsService) UploadProjectMarkdown(pid interface{}, content io.Reader, filename string, options ...RequestOptionFunc) (*ProjectMarkdownUploadedFile, *Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
 		return nil, nil, err
 	}
 	u := fmt.Sprintf("projects/%s/uploads", PathEscape(project))
 
-	// We need to create the request as a GET request to make sure the options
-	// are set correctly. After the request is created we will overwrite both
-	// the method and the body.
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
+	req, err := s.client.UploadRequest(
+		http.MethodPost,
+		u,
+		content,
+		filename,
+		UploadFile,
+		nil,
+		options,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// Overwrite the method and body.
-	req.Method = http.MethodPost
-	req.SetBody(content)
 
 	f := new(ProjectMarkdownUploadedFile)
 	resp, err := s.client.Do(req, f)

@@ -21,13 +21,24 @@ import (
 	"net/http"
 )
 
-// NamespacesService handles communication with the namespace related methods
-// of the GitLab API.
-//
-// GitLab API docs: https://docs.gitlab.com/ee/api/namespaces.html
-type NamespacesService struct {
-	client *Client
-}
+type (
+	NamespacesServiceInterface interface {
+		ListNamespaces(opt *ListNamespacesOptions, options ...RequestOptionFunc) ([]*Namespace, *Response, error)
+		SearchNamespace(query string, options ...RequestOptionFunc) ([]*Namespace, *Response, error)
+		GetNamespace(id interface{}, options ...RequestOptionFunc) (*Namespace, *Response, error)
+		NamespaceExists(id interface{}, opt *NamespaceExistsOptions, options ...RequestOptionFunc) (*NamespaceExistance, *Response, error)
+	}
+
+	// NamespacesService handles communication with the namespace related methods
+	// of the GitLab API.
+	//
+	// GitLab API docs: https://docs.gitlab.com/ee/api/namespaces.html
+	NamespacesService struct {
+		client *Client
+	}
+)
+
+var _ NamespacesServiceInterface = (*NamespacesService)(nil)
 
 // Namespace represents a GitLab namespace.
 //
@@ -59,8 +70,9 @@ func (n Namespace) String() string {
 // GitLab API docs: https://docs.gitlab.com/ee/api/namespaces.html#list-namespaces
 type ListNamespacesOptions struct {
 	ListOptions
-	Search    *string `url:"search,omitempty" json:"search,omitempty"`
-	OwnedOnly *bool   `url:"owned_only,omitempty" json:"owned_only,omitempty"`
+	Search       *string `url:"search,omitempty" json:"search,omitempty"`
+	OwnedOnly    *bool   `url:"owned_only,omitempty" json:"owned_only,omitempty"`
+	TopLevelOnly *bool   `url:"top_level_only,omitempty" json:"top_level_only,omitempty"`
 }
 
 // ListNamespaces gets a list of projects accessible by the authenticated user.

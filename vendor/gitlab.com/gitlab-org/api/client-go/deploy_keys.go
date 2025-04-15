@@ -22,13 +22,27 @@ import (
 	"time"
 )
 
-// DeployKeysService handles communication with the keys related methods
-// of the GitLab API.
-//
-// GitLab API docs: https://docs.gitlab.com/ee/api/deploy_keys.html
-type DeployKeysService struct {
-	client *Client
-}
+type (
+	DeployKeysServiceInterface interface {
+		ListAllDeployKeys(opt *ListInstanceDeployKeysOptions, options ...RequestOptionFunc) ([]*InstanceDeployKey, *Response, error)
+		ListProjectDeployKeys(pid interface{}, opt *ListProjectDeployKeysOptions, options ...RequestOptionFunc) ([]*ProjectDeployKey, *Response, error)
+		GetDeployKey(pid interface{}, deployKey int, options ...RequestOptionFunc) (*ProjectDeployKey, *Response, error)
+		AddDeployKey(pid interface{}, opt *AddDeployKeyOptions, options ...RequestOptionFunc) (*ProjectDeployKey, *Response, error)
+		DeleteDeployKey(pid interface{}, deployKey int, options ...RequestOptionFunc) (*Response, error)
+		EnableDeployKey(pid interface{}, deployKey int, options ...RequestOptionFunc) (*ProjectDeployKey, *Response, error)
+		UpdateDeployKey(pid interface{}, deployKey int, opt *UpdateDeployKeyOptions, options ...RequestOptionFunc) (*ProjectDeployKey, *Response, error)
+	}
+
+	// DeployKeysService handles communication with the keys related methods
+	// of the GitLab API.
+	//
+	// GitLab API docs: https://docs.gitlab.com/ee/api/deploy_keys.html
+	DeployKeysService struct {
+		client *Client
+	}
+)
+
+var _ DeployKeysServiceInterface = (*DeployKeysService)(nil)
 
 // InstanceDeployKey represents a GitLab deploy key with the associated
 // projects it has write access to.
@@ -62,12 +76,14 @@ func (k DeployKeyProject) String() string {
 
 // ProjectDeployKey represents a GitLab project deploy key.
 type ProjectDeployKey struct {
-	ID        int        `json:"id"`
-	Title     string     `json:"title"`
-	Key       string     `json:"key"`
-	CreatedAt *time.Time `json:"created_at"`
-	CanPush   bool       `json:"can_push"`
-	ExpiresAt *time.Time `json:"expires_at"`
+	ID                int        `json:"id"`
+	Title             string     `json:"title"`
+	Key               string     `json:"key"`
+	Fingerprint       string     `json:"fingerprint"`
+	FingerprintSHA256 string     `json:"fingerprint_sha256"`
+	CreatedAt         *time.Time `json:"created_at"`
+	CanPush           bool       `json:"can_push"`
+	ExpiresAt         *time.Time `json:"expires_at"`
 }
 
 func (k ProjectDeployKey) String() string {
