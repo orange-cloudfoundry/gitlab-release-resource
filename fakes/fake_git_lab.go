@@ -168,17 +168,17 @@ type FakeGitLab struct {
 		result1 *gitlab.Release
 		result2 error
 	}
-	UploadProjectFileStub        func(string) (*gitlab.ProjectFile, error)
+	UploadProjectFileStub        func(string) (*gitlab.ProjectMarkdownUploadedFile, error)
 	uploadProjectFileMutex       sync.RWMutex
 	uploadProjectFileArgsForCall []struct {
 		arg1 string
 	}
 	uploadProjectFileReturns struct {
-		result1 *gitlab.ProjectFile
+		result1 *gitlab.ProjectMarkdownUploadedFile
 		result2 error
 	}
 	uploadProjectFileReturnsOnCall map[int]struct {
-		result1 *gitlab.ProjectFile
+		result1 *gitlab.ProjectMarkdownUploadedFile
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -940,7 +940,7 @@ func (fake *FakeGitLab) UpdateReleaseReturnsOnCall(i int, result1 *gitlab.Releas
 	}{result1, result2}
 }
 
-func (fake *FakeGitLab) UploadProjectFile(arg1 string) (*gitlab.ProjectFile, error) {
+func (fake *FakeGitLab) UploadProjectFile(arg1 string) (*gitlab.ProjectMarkdownUploadedFile, error) {
 	fake.uploadProjectFileMutex.Lock()
 	ret, specificReturn := fake.uploadProjectFileReturnsOnCall[len(fake.uploadProjectFileArgsForCall)]
 	fake.uploadProjectFileArgsForCall = append(fake.uploadProjectFileArgsForCall, struct {
@@ -965,7 +965,7 @@ func (fake *FakeGitLab) UploadProjectFileCallCount() int {
 	return len(fake.uploadProjectFileArgsForCall)
 }
 
-func (fake *FakeGitLab) UploadProjectFileCalls(stub func(string) (*gitlab.ProjectFile, error)) {
+func (fake *FakeGitLab) UploadProjectFileCalls(stub func(string) (*gitlab.ProjectMarkdownUploadedFile, error)) {
 	fake.uploadProjectFileMutex.Lock()
 	defer fake.uploadProjectFileMutex.Unlock()
 	fake.UploadProjectFileStub = stub
@@ -978,28 +978,28 @@ func (fake *FakeGitLab) UploadProjectFileArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeGitLab) UploadProjectFileReturns(result1 *gitlab.ProjectFile, result2 error) {
+func (fake *FakeGitLab) UploadProjectFileReturns(result1 *gitlab.ProjectMarkdownUploadedFile, result2 error) {
 	fake.uploadProjectFileMutex.Lock()
 	defer fake.uploadProjectFileMutex.Unlock()
 	fake.UploadProjectFileStub = nil
 	fake.uploadProjectFileReturns = struct {
-		result1 *gitlab.ProjectFile
+		result1 *gitlab.ProjectMarkdownUploadedFile
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeGitLab) UploadProjectFileReturnsOnCall(i int, result1 *gitlab.ProjectFile, result2 error) {
+func (fake *FakeGitLab) UploadProjectFileReturnsOnCall(i int, result1 *gitlab.ProjectMarkdownUploadedFile, result2 error) {
 	fake.uploadProjectFileMutex.Lock()
 	defer fake.uploadProjectFileMutex.Unlock()
 	fake.UploadProjectFileStub = nil
 	if fake.uploadProjectFileReturnsOnCall == nil {
 		fake.uploadProjectFileReturnsOnCall = make(map[int]struct {
-			result1 *gitlab.ProjectFile
+			result1 *gitlab.ProjectMarkdownUploadedFile
 			result2 error
 		})
 	}
 	fake.uploadProjectFileReturnsOnCall[i] = struct {
-		result1 *gitlab.ProjectFile
+		result1 *gitlab.ProjectMarkdownUploadedFile
 		result2 error
 	}{result1, result2}
 }

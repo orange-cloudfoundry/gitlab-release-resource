@@ -26,7 +26,7 @@ func NewOutCommand(gitlab GitLab, writer io.Writer) *OutCommand {
 func (c *OutCommand) ensureRelease(name string, tag string, body *string) (*gitlab.Release, error) {
 	_, err := c.gitlab.GetRelease(tag)
 	if err != nil {
-		if !errors.Is(err, NotFound) {
+		if !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
 		return c.gitlab.CreateRelease(name, tag, body)
@@ -37,7 +37,7 @@ func (c *OutCommand) ensureRelease(name string, tag string, body *string) (*gitl
 func (c *OutCommand) ensureTag(tag string, commitishPath string) (*gitlab.Tag, error) {
 	t, err := c.gitlab.GetTag(tag)
 	if err != nil {
-		if !errors.Is(err, NotFound) {
+		if !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
 		commitish, err := c.fileContents(commitishPath)

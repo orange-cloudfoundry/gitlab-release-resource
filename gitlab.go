@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	NotFound = errors.New("object not found")
+	ErrNotFound = errors.New("object not found")
 )
 
 //go:generate counterfeiter . GitLab
@@ -33,7 +33,7 @@ type GitLab interface {
 	CreateRelease(name string, tag string, description *string) (*gitlab.Release, error)
 	UpdateRelease(name string, tag string, description *string) (*gitlab.Release, error)
 
-	UploadProjectFile(file string) (*gitlab.ProjectFile, error)
+	UploadProjectFile(file string) (*gitlab.ProjectMarkdownUploadedFile, error)
 	DownloadProjectFile(url, file string) error
 
 	GetReleaseLinks(tag string) ([]*gitlab.ReleaseLink, error)
@@ -216,12 +216,17 @@ func (g *GitlabClient) GetTag(tag_name string) (*gitlab.Tag, error) {
 	tag, resp, err := g.client.Tags.GetTag(g.repository, tag_name)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, NotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			fmt.Printf("Failed to close response body: %s\n", err)
+		}
+	}(resp.Body)
 	return tag, nil
 }
 
@@ -233,9 +238,9 @@ func (g *GitlabClient) GetRelease(tag_name string) (*gitlab.Release, error) {
 		}
 		switch resp.StatusCode {
 		case http.StatusForbidden:
-			return nil, NotFound
+			return nil, ErrNotFound
 		case http.StatusNotFound:
-			return nil, NotFound
+			return nil, ErrNotFound
 		default:
 			return nil, err
 		}
@@ -336,17 +341,22 @@ func (g *GitlabClient) UpdateRelease(name string, tag string, description *strin
 	return release, nil
 }
 
-func (g *GitlabClient) UploadProjectFile(filepath string) (*gitlab.ProjectFile, error) {
+func (g *GitlabClient) UploadProjectFile(filepath string) (*gitlab.ProjectMarkdownUploadedFile, error) {
 	reader, err := os.Open(filepath)
 	if err != nil {
-		return &gitlab.ProjectFile{}, err
+		return nil, err
 	}
+	defer func(reader *os.File) {
+		err := reader.Close()
+		if err != nil {
+			fmt.Printf("Error closing file reader: %s\n", err)
+		}
+	}(reader)
 	filename := path.Base(filepath)
-	projectFile, _, err := g.client.Projects.UploadFile(g.repository, reader, filename)
+	projectFile, _, err := g.client.ProjectMarkdownUploads.UploadProjectMarkdown(g.repository, reader, filename)
 	if err != nil {
-		return &gitlab.ProjectFile{}, err
+		return nil, err
 	}
-
 	return projectFile, nil
 }
 
@@ -355,7 +365,12 @@ func (g *GitlabClient) DownloadProjectFile(fileURL, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func(out *os.File) {
+		err := out.Close()
+		if err != nil {
+			fmt.Printf("Error closing file: %s\n", err)
+		}
+	}(out)
 
 	// e.g. (baseURL) + (group/project) + (/uploads/hash/filename)
 	filePathRef, err := url.Parse(fileURL)
@@ -380,7 +395,12 @@ func (g *GitlabClient) DownloadProjectFile(fileURL, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			fmt.Printf("Error closing response body: %s\n", err)
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download file `%s`: HTTP status %d", filepath.Base(destPath), resp.StatusCode)
