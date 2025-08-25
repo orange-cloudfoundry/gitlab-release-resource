@@ -121,9 +121,9 @@ var _ = Describe("GitLab Client", func() {
 					),
 				)
 			})
-			It("Returns the NotFound error", func() {
+			It("Returns the ErrNotFound error", func() {
 				_, err := client.GetTag("some-tag")
-				Expect(err).To(Equal(NotFound))
+				Expect(err).To(Equal(ErrNotFound))
 			})
 		})
 	})

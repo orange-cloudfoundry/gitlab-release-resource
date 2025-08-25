@@ -59,8 +59,8 @@ var _ = Describe("Out Command", func() {
 			return gitlabClient.CreateReleaseStub(name, tag, body)
 		}
 
-		gitlabClient.UploadProjectFileStub = func(file string) (*gitlab.ProjectFile, error) {
-			return &gitlab.ProjectFile{
+		gitlabClient.UploadProjectFileStub = func(file string) (*gitlab.ProjectMarkdownUploadedFile, error) {
+			return &gitlab.ProjectMarkdownUploadedFile{
 				URL: "/base/" + filepath.Base(file),
 			}, nil
 		}
@@ -133,7 +133,7 @@ var _ = Describe("Out Command", func() {
 						return r, nil
 					}
 				}
-				return nil, resource.NotFound
+				return nil, resource.ErrNotFound
 			}
 
 			gitlabClient.GetReleaseLinksStub = func(tag string) ([]*gitlab.ReleaseLink, error) {
@@ -142,7 +142,7 @@ var _ = Describe("Out Command", func() {
 						return r.Assets.Links, nil
 					}
 				}
-				return nil, resource.NotFound
+				return nil, resource.ErrNotFound
 			}
 
 			namePath := filepath.Join(sourcesDir, "name")
@@ -217,7 +217,7 @@ var _ = Describe("Out Command", func() {
 	Context("when the release has not already been created", func() {
 		BeforeEach(func() {
 			gitlabClient.GetReleaseStub = func(tag string) (*gitlab.Release, error) {
-				return nil, resource.NotFound
+				return nil, resource.ErrNotFound
 			}
 
 			namePath := filepath.Join(sourcesDir, "name")
@@ -238,7 +238,7 @@ var _ = Describe("Out Command", func() {
 		Context("when the underlying tag has not already been created", func() {
 			BeforeEach(func() {
 				gitlabClient.GetTagStub = func(name string) (*gitlab.Tag, error) {
-					return nil, resource.NotFound
+					return nil, resource.ErrNotFound
 				}
 			})
 

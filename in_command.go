@@ -58,7 +58,7 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 
 	release, err := c.gitlab.GetRelease(request.Version.Tag)
 	if err != nil {
-		if errors.Is(err, NotFound) {
+		if errors.Is(err, ErrNotFound) {
 			return InResponse{}, errors.New("no releases")
 		}
 		return InResponse{}, err

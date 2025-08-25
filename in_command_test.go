@@ -301,7 +301,7 @@ var _ = Describe("In Command", func() {
 
 	Context("when no tagged release is present", func() {
 		BeforeEach(func() {
-			gitlabClient.GetReleaseReturns(nil, resource.NotFound)
+			gitlabClient.GetReleaseReturns(nil, resource.ErrNotFound)
 			inRequest.Version = &resource.Version{
 				Tag: "v0.40.0",
 			}
