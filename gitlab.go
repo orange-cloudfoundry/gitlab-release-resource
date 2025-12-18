@@ -149,7 +149,7 @@ func (g *GitlabClient) ListTagsUntil(tag_name string) ([]*gitlab.Tag, error) {
 
 	opt := &gitlab.ListTagsOptions{
 		ListOptions: gitlab.ListOptions{
-			PerPage: pageSize,
+			PerPage: int64(pageSize),
 			Page:    1,
 		},
 		OrderBy: gitlab.Ptr("updated"),
@@ -288,8 +288,10 @@ func (g *GitlabClient) CreateRelease(name string, tag string, description *strin
 func (g *GitlabClient) GetReleaseLinks(tag string) ([]*gitlab.ReleaseLink, error) {
 	links := []*gitlab.ReleaseLink{}
 	opt := &gitlab.ListReleaseLinksOptions{
-		PerPage: 100,
-		Page:    1,
+		ListOptions: gitlab.ListOptions{
+			PerPage: 100,
+			Page:    1,
+		},
 	}
 	for {
 		items, resp, err := g.client.ReleaseLinks.ListReleaseLinks(g.repository, tag, opt)
