@@ -28,6 +28,7 @@ import (
 	"math"
 	"math/rand"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"sort"
@@ -49,11 +50,11 @@ const (
 	apiVersionPath = "api/v4/"
 	userAgent      = "go-gitlab"
 
-	headerRateLimit = "RateLimit-Limit"
-	headerRateReset = "RateLimit-Reset"
+	headerRateLimit = "Ratelimit-Limit"
+	headerRateReset = "Ratelimit-Reset"
 
-	AccessTokenHeaderName = "PRIVATE-TOKEN"
-	JobTokenHeaderName    = "JOB-TOKEN"
+	AccessTokenHeaderName = "Private-Token"
+	JobTokenHeaderName    = "Job-Token"
 )
 
 // AuthType represents an authentication type within GitLab.
@@ -106,6 +107,10 @@ type Client struct {
 	// Default request options applied to every request.
 	defaultRequestOptions []RequestOptionFunc
 
+	// interceptors contain the stack of *http.Client round tripper builder func
+	// which are used to decorate the http.Client#Transport value.
+	interceptors []Interceptor
+
 	// User agent used when communicating with the GitLab API.
 	UserAgent string
 
@@ -114,10 +119,12 @@ type Client struct {
 
 	// Services used for talking to different parts of the GitLab API.
 	AccessRequests                   AccessRequestsServiceInterface
+	AdminCompliancePolicySettings    AdminCompliancePolicySettingsServiceInterface
 	AlertManagement                  AlertManagementServiceInterface
 	Appearance                       AppearanceServiceInterface
 	Applications                     ApplicationsServiceInterface
 	ApplicationStatistics            ApplicationStatisticsServiceInterface
+	Attestations                     AttestationsServiceInterface
 	AuditEvents                      AuditEventsServiceInterface
 	Avatar                           AvatarRequestsServiceInterface
 	AwardEmoji                       AwardEmojiServiceInterface
@@ -161,6 +168,7 @@ type Client struct {
 	GroupActivityAnalytics           GroupActivityAnalyticsServiceInterface
 	GroupBadges                      GroupBadgesServiceInterface
 	GroupCluster                     GroupClustersServiceInterface
+	GroupCredentials                 GroupCredentialsServiceInterface
 	GroupEpicBoards                  GroupEpicBoardsServiceInterface
 	GroupImportExport                GroupImportExportServiceInterface
 	Integrations                     IntegrationsServiceInterface
@@ -171,6 +179,7 @@ type Client struct {
 	GroupMembers                     GroupMembersServiceInterface
 	GroupMilestones                  GroupMilestonesServiceInterface
 	GroupProtectedEnvironments       GroupProtectedEnvironmentsServiceInterface
+	GroupRelationsExport             GroupRelationsExportServiceInterface
 	GroupReleases                    GroupReleasesServiceInterface
 	GroupRepositoryStorageMove       GroupRepositoryStorageMoveServiceInterface
 	GroupSCIM                        GroupSCIMServiceInterface
@@ -196,10 +205,12 @@ type Client struct {
 	MemberRolesService               MemberRolesServiceInterface
 	MergeRequestApprovals            MergeRequestApprovalsServiceInterface
 	MergeRequestApprovalSettings     MergeRequestApprovalSettingsServiceInterface
+	MergeRequestContextCommits       MergeRequestContextCommitsServiceInterface
 	MergeRequests                    MergeRequestsServiceInterface
 	MergeTrains                      MergeTrainsServiceInterface
 	Metadata                         MetadataServiceInterface
 	Milestones                       MilestonesServiceInterface
+	ModelRegistry                    ModelRegistryServiceInterface
 	Namespaces                       NamespacesServiceInterface
 	Notes                            NotesServiceInterface
 	NotificationSettings             NotificationSettingsServiceInterface
@@ -212,6 +223,7 @@ type Client struct {
 	Pipelines                        PipelinesServiceInterface
 	PlanLimits                       PlanLimitsServiceInterface
 	ProjectAccessTokens              ProjectAccessTokensServiceInterface
+	ProjectAliases                   ProjectAliasesServiceInterface
 	ProjectBadges                    ProjectBadgesServiceInterface
 	ProjectCluster                   ProjectClustersServiceInterface
 	ProjectFeatureFlags              ProjectFeatureFlagServiceInterface
@@ -223,12 +235,14 @@ type Client struct {
 	ProjectRepositoryStorageMove     ProjectRepositoryStorageMoveServiceInterface
 	ProjectSecuritySettings          ProjectSecuritySettingsServiceInterface
 	ProjectSnippets                  ProjectSnippetsServiceInterface
+	ProjectStatistics                ProjectStatisticsServiceInterface
 	ProjectTemplates                 ProjectTemplatesServiceInterface
 	ProjectVariables                 ProjectVariablesServiceInterface
 	ProjectVulnerabilities           ProjectVulnerabilitiesServiceInterface
 	Projects                         ProjectsServiceInterface
 	ProtectedBranches                ProtectedBranchesServiceInterface
 	ProtectedEnvironments            ProtectedEnvironmentsServiceInterface
+	ProtectedPackages                ProtectedPackagesServiceInterface
 	ProtectedTags                    ProtectedTagsServiceInterface
 	ReleaseLinks                     ReleaseLinksServiceInterface
 	Releases                         ReleasesServiceInterface
@@ -261,15 +275,41 @@ type Client struct {
 	Wikis                            WikisServiceInterface
 }
 
+// Interceptor is used to build a *http.Client request pipeline,
+//
+// It receives the next RoundTripper in the chain and returns a new one that
+// will be used for the request.
+//
+// This next RoundTripper might or might not be the actual transporter,
+// which actually does the request call,
+// but it is safe to assume that calling the next will result in the expected HTTP call.
+//
+// Example:
+//
+//	// Simple logger interceptor.
+//	logger := func(next http.RoundTripper) http.RoundTripper {
+//	    return roundtripperFunc(func(req *http.Request) (*http.Response, error) {
+//	        fmt.Printf("Request: %s %s\n", req.Method, req.URL)
+//	        resp, err := next.RoundTrip(req)
+//	        if err == nil {
+//	            fmt.Printf("Response status: %d\n", resp.StatusCode)
+//	        }
+//	        return resp, err
+//	    })
+//	}
+//
+// The Interceptor type lets you add such middlewares to a client by chaining them.
+type Interceptor func(next http.RoundTripper) http.RoundTripper
+
 // ListOptions specifies the optional parameters to various List methods that
 // support pagination.
 type ListOptions struct {
 	// For keyset-based paginated result sets, the value must be `"keyset"`
 	Pagination string `url:"pagination,omitempty" json:"pagination,omitempty"`
 	// For offset-based and keyset-based paginated result sets, the number of results to include per page.
-	PerPage int `url:"per_page,omitempty" json:"per_page,omitempty"`
+	PerPage int64 `url:"per_page,omitempty" json:"per_page,omitempty"`
 	// For offset-based paginated result sets, page of results to retrieve.
-	Page int `url:"page,omitempty" json:"page,omitempty"`
+	Page int64 `url:"page,omitempty" json:"page,omitempty"`
 	// For keyset-based paginated result sets, tree record ID at which to fetch the next page.
 	PageToken string `url:"page_token,omitempty" json:"page_token,omitempty"`
 	// For keyset-based paginated result sets, name of the column by which to order
@@ -365,6 +405,8 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 		}
 	}
 
+	decorateHTTPClientTransportWithInterceptors(c)
+
 	// Wire up the cookie jar.
 	// The ClientOptionFunc can't do it directly,
 	// because the user may also specify HTTPClient
@@ -393,10 +435,12 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 
 	// Create all the public services.
 	c.AccessRequests = &AccessRequestsService{client: c}
+	c.AdminCompliancePolicySettings = &AdminCompliancePolicySettingsService{client: c}
 	c.AlertManagement = &AlertManagementService{client: c}
 	c.Appearance = &AppearanceService{client: c}
 	c.Applications = &ApplicationsService{client: c}
 	c.ApplicationStatistics = &ApplicationStatisticsService{client: c}
+	c.Attestations = &AttestationsService{client: c}
 	c.AuditEvents = &AuditEventsService{client: c}
 	c.Avatar = &AvatarRequestsService{client: c}
 	c.AwardEmoji = &AwardEmojiService{client: c}
@@ -440,6 +484,7 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 	c.GroupActivityAnalytics = &GroupActivityAnalyticsService{client: c}
 	c.GroupBadges = &GroupBadgesService{client: c}
 	c.GroupCluster = &GroupClustersService{client: c}
+	c.GroupCredentials = &GroupCredentialsService{client: c}
 	c.GroupEpicBoards = &GroupEpicBoardsService{client: c}
 	c.GroupImportExport = &GroupImportExportService{client: c}
 	c.Integrations = &IntegrationsService{client: c}
@@ -450,6 +495,7 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 	c.GroupMembers = &GroupMembersService{client: c}
 	c.GroupMilestones = &GroupMilestonesService{client: c}
 	c.GroupProtectedEnvironments = &GroupProtectedEnvironmentsService{client: c}
+	c.GroupRelationsExport = &GroupRelationsExportService{client: c}
 	c.GroupReleases = &GroupReleasesService{client: c}
 	c.GroupRepositoryStorageMove = &GroupRepositoryStorageMoveService{client: c}
 	c.GroupSCIM = &GroupSCIMService{client: c}
@@ -475,10 +521,12 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 	c.MemberRolesService = &MemberRolesService{client: c}
 	c.MergeRequestApprovals = &MergeRequestApprovalsService{client: c}
 	c.MergeRequestApprovalSettings = &MergeRequestApprovalSettingsService{client: c}
+	c.MergeRequestContextCommits = &MergeRequestContextCommitsService{client: c}
 	c.MergeRequests = &MergeRequestsService{client: c, timeStats: timeStats}
 	c.MergeTrains = &MergeTrainsService{client: c}
 	c.Metadata = &MetadataService{client: c}
 	c.Milestones = &MilestonesService{client: c}
+	c.ModelRegistry = &ModelRegistryService{client: c}
 	c.Namespaces = &NamespacesService{client: c}
 	c.Notes = &NotesService{client: c}
 	c.NotificationSettings = &NotificationSettingsService{client: c}
@@ -491,6 +539,7 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 	c.Pipelines = &PipelinesService{client: c}
 	c.PlanLimits = &PlanLimitsService{client: c}
 	c.ProjectAccessTokens = &ProjectAccessTokensService{client: c}
+	c.ProjectAliases = &ProjectAliasesService{client: c}
 	c.ProjectBadges = &ProjectBadgesService{client: c}
 	c.ProjectCluster = &ProjectClustersService{client: c}
 	c.ProjectFeatureFlags = &ProjectFeatureFlagService{client: c}
@@ -502,12 +551,14 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 	c.ProjectRepositoryStorageMove = &ProjectRepositoryStorageMoveService{client: c}
 	c.ProjectSecuritySettings = &ProjectSecuritySettingsService{client: c}
 	c.ProjectSnippets = &ProjectSnippetsService{client: c}
+	c.ProjectStatistics = &ProjectStatisticsService{client: c}
 	c.ProjectTemplates = &ProjectTemplatesService{client: c}
 	c.ProjectVariables = &ProjectVariablesService{client: c}
 	c.ProjectVulnerabilities = &ProjectVulnerabilitiesService{client: c}
 	c.Projects = &ProjectsService{client: c}
 	c.ProtectedBranches = &ProtectedBranchesService{client: c}
 	c.ProtectedEnvironments = &ProtectedEnvironmentsService{client: c}
+	c.ProtectedPackages = &ProtectedPackagesService{client: c}
 	c.ProtectedTags = &ProtectedTagsService{client: c}
 	c.ReleaseLinks = &ReleaseLinksService{client: c}
 	c.Releases = &ReleasesService{client: c}
@@ -542,22 +593,119 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 	return c, nil
 }
 
+func decorateHTTPClientTransportWithInterceptors(c *Client) {
+	if len(c.interceptors) == 0 {
+		return
+	}
+	c.client.HTTPClient.Transport = chainInterceptors(c.client.HTTPClient.Transport, c.interceptors...)
+}
+
+func chainInterceptors(rt http.RoundTripper, interceptors ...Interceptor) http.RoundTripper {
+	for i := len(interceptors) - 1; i >= 0; i-- {
+		rt = interceptors[i](rt)
+	}
+	return rt
+}
+
 func (c *Client) HTTPClient() *http.Client {
 	return c.client.HTTPClient
 }
 
 // retryHTTPCheck provides a callback for Client.CheckRetry which
-// will retry both rate limit (429) and server (>= 500) errors.
+// respects default retries and retries what is safe to retry.
 func (c *Client) retryHTTPCheck(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	// do not retry if retries are disabled completely
+	if c.disableRetries {
+		return false, nil
+	}
+
+	// do not retry on context.Canceled or context.DeadlineExceeded
 	if ctx.Err() != nil {
 		return false, ctx.Err()
 	}
+
 	if err != nil {
-		return false, err
+		// We should be able to retry requests with assumed idempotent HTTP methods.
+		// In a future iteration we might want to annotate requests that are idempotent
+		// to further improve this logic here.
+		if resp != nil && resp.Request != nil {
+			switch resp.Request.Method {
+			case http.MethodConnect, http.MethodOptions, http.MethodTrace, http.MethodHead, http.MethodGet:
+				return true, nil
+			}
+		}
+
+		// Only retry errors that we know happened before writing to the wire
+		var urlErr *url.Error
+		var netOpErr *net.OpError
+		var dnsErr *net.DNSError
+		// see Go src/net/http/transport.go
+		var potentialTLSHandshakeErr interface {
+			Timeout() bool
+			Temporary() bool
+		}
+
+		switch {
+		// DNS errors are safe - they happen before any connection
+		case errors.As(err, &dnsErr):
+			// NXDOMAIN should not be retried
+			if dnsErr.IsNotFound {
+				return false, err
+			}
+			// Other DNS errors are safe to retry
+			return true, nil
+
+		// Direct net.OpError for dial operations
+		case errors.As(err, &netOpErr):
+			// from the comments in the implementation of net.OpError.Temporary
+			// it seems that it's safe to retry temporary OpErrors.
+			if netOpErr.Temporary() {
+				return true, nil
+			}
+
+			if strings.EqualFold(netOpErr.Op, "dial") {
+				return true, nil
+			}
+
+		// Connection refused errors are safe - they happen at TCP establishment
+		case errors.As(err, &urlErr):
+			if strings.Contains(urlErr.Error(), "connection refused") {
+				return true, nil
+			}
+
+		// TLS handshake errors are safe if we can identify them
+		case errors.As(err, &potentialTLSHandshakeErr):
+			// Check if this is a TLS handshake timeout specifically
+			if strings.Contains(err.Error(), "net/http: TLS handshake timeout") {
+				return true, nil
+			}
+		}
+
+		// we are conservative here and do not want to retry any "unknown" errors, because
+		// they could have happened when the connection was already established and the request
+		// partially fulfilled. We don't have the insights here if the request
+		// was idempotent or not, so we reject a retry.
+		return false, nil
 	}
-	if !c.disableRetries && (resp.StatusCode == 429 || resp.StatusCode >= 500) {
+
+	// 429 Too Many Requests is recoverable. Sometimes the server puts
+	// a Retry-After response header to indicate when the server is
+	// available to start processing request from client.
+	if resp.StatusCode == http.StatusTooManyRequests {
 		return true, nil
 	}
+
+	// Check the response code. We retry on 500-range responses to allow
+	// the server time to recover, as 500's are typically not permanent
+	// errors and may relate to outages on the server side. This will catch
+	// invalid response codes as well, like 0 and 999.
+	// Status code 0 is especially important for AWS ALB:
+	// https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-troubleshooting.html#response-code-000
+	if resp.StatusCode == 0 || (resp.StatusCode >= 500 && resp.StatusCode != http.StatusNotImplemented) {
+		// return true, fmt.Errorf("unexpected HTTP status %s", resp.Status)
+		return true, nil
+	}
+
 	return false, nil
 }
 
@@ -577,7 +725,7 @@ func (c *Client) retryHTTPBackoff(min, max time.Duration, attemptNum int, resp *
 }
 
 // rateLimitBackoff provides a callback for Client.Backoff which will use the
-// RateLimit-Reset header to determine the time to wait. We add some jitter
+// Ratelimit-Reset header to determine the time to wait. We add some jitter
 // to prevent a thundering herd.
 //
 // min and max are mainly used for bounding the jitter that will be added to
@@ -599,7 +747,7 @@ func rateLimitBackoff(min, max time.Duration, attemptNum int, resp *http.Respons
 				}
 			}
 		} else {
-			// In case the RateLimit-Reset header is not set, back off an additional
+			// In case the Ratelimit-Reset header is not set, back off an additional
 			// 100% exponentially. With the default milliseconds being set to 100 for
 			// `min`, this makes the 5th retry wait 3.2 seconds (3,200 ms) by default.
 			min = time.Duration(float64(min) * math.Pow(2, float64(attemptNum)))
@@ -821,12 +969,12 @@ type Response struct {
 	*http.Response
 
 	// Fields used for offset-based pagination.
-	TotalItems   int
-	TotalPages   int
-	ItemsPerPage int
-	CurrentPage  int
-	NextPage     int
-	PreviousPage int
+	TotalItems   int64
+	TotalPages   int64
+	ItemsPerPage int64
+	CurrentPage  int64
+	NextPage     int64
+	PreviousPage int64
 
 	// Fields used for keyset-based pagination.
 	PreviousLink string
@@ -863,28 +1011,28 @@ const (
 // various pagination link values in the Response.
 func (r *Response) populatePageValues() {
 	if totalItems := r.Header.Get(xTotal); totalItems != "" {
-		r.TotalItems, _ = strconv.Atoi(totalItems)
+		r.TotalItems, _ = strconv.ParseInt(totalItems, 10, 64)
 	}
 	if totalPages := r.Header.Get(xTotalPages); totalPages != "" {
-		r.TotalPages, _ = strconv.Atoi(totalPages)
+		r.TotalPages, _ = strconv.ParseInt(totalPages, 10, 64)
 	}
 	if itemsPerPage := r.Header.Get(xPerPage); itemsPerPage != "" {
-		r.ItemsPerPage, _ = strconv.Atoi(itemsPerPage)
+		r.ItemsPerPage, _ = strconv.ParseInt(itemsPerPage, 10, 64)
 	}
 	if currentPage := r.Header.Get(xPage); currentPage != "" {
-		r.CurrentPage, _ = strconv.Atoi(currentPage)
+		r.CurrentPage, _ = strconv.ParseInt(currentPage, 10, 64)
 	}
 	if nextPage := r.Header.Get(xNextPage); nextPage != "" {
-		r.NextPage, _ = strconv.Atoi(nextPage)
+		r.NextPage, _ = strconv.ParseInt(nextPage, 10, 64)
 	}
 	if previousPage := r.Header.Get(xPrevPage); previousPage != "" {
-		r.PreviousPage, _ = strconv.Atoi(previousPage)
+		r.PreviousPage, _ = strconv.ParseInt(previousPage, 10, 64)
 	}
 }
 
 func (r *Response) populateLinkValues() {
 	if link := r.Header.Get("Link"); link != "" {
-		for _, link := range strings.Split(link, ",") {
+		for link := range strings.SplitSeq(link, ",") {
 			parts := strings.Split(link, ";")
 			if len(parts) < 2 {
 				continue
@@ -999,6 +1147,8 @@ func parseID(id any) (string, error) {
 	switch v := id.(type) {
 	case int:
 		return strconv.Itoa(v), nil
+	case int64:
+		return strconv.FormatInt(v, 10), nil
 	case string:
 		return v, nil
 	default:

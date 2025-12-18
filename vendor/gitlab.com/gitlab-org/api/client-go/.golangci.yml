@@ -18,11 +18,14 @@ output:
 linters:
   enable:
     - asciicheck
+    - canonicalheader
     - dogsled
     - dupword
     - errorlint
     - goconst
+    - godoclint
     - misspell
+    - modernize
     - nakedret
     - nolintlint
     - revive
@@ -31,6 +34,8 @@ linters:
     - unconvert
     - usestdlibvars
     - whitespace
+    - tparallel
+    - paralleltest
   disable:
     - errcheck
   settings:
@@ -38,13 +43,19 @@ linters:
       locale: US
       ignore-rules:
         - noteable
+    modernize:
+      disable:
+        - omitzero
     revive:
       enable-all-rules: false
       rules:
         - name: deep-exit
         - name: get-return
         - name: redundant-import-alias
+        - name: struct-tag
         - name: time-date
+        - name: unused-parameter
+        - name: var-naming
     staticcheck:
       checks:
         - ST1020
@@ -64,6 +75,7 @@ linters:
         - error-nil
         - expected-actual
         - formatter
+        - go-require
         - len
         - negative-positive
         - nil-compare
@@ -90,6 +102,10 @@ linters:
       - source: "// GitLab API docs:"
         linters:
           - staticcheck
+      - path: _test\.go$
+        text: unused-parameter
+        linters:
+          - revive
     paths:
       - third_party$
       - builtin$
