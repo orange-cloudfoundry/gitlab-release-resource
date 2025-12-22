@@ -17,7 +17,7 @@ require (
 	golang.org/x/time v0.14.0 // indirect
 )
 
-require gitlab.com/gitlab-org/api/client-go v1.9.1
+require gitlab.com/gitlab-org/api/client-go v1.10.0
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
