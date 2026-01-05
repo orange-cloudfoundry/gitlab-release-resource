@@ -152,6 +152,10 @@ type Group struct {
 	AllowedEmailDomainsList         string                     `json:"allowed_email_domains_list"`
 	WikiAccessLevel                 AccessControlValue         `json:"wiki_access_level"`
 
+	OnlyAllowMergeIfPipelineSucceeds          bool `json:"only_allow_merge_if_pipeline_succeeds"`
+	AllowMergeOnSkippedPipeline               bool `json:"allow_merge_on_skipped_pipeline"`
+	OnlyAllowMergeIfAllDiscussionsAreResolved bool `json:"only_allow_merge_if_all_discussions_are_resolved"`
+
 	// Deprecated: will be removed in v5 of the API, use ListGroupProjects instead
 	Projects []*Project `json:"projects"`
 
@@ -660,6 +664,10 @@ type UpdateGroupOptions struct {
 	IPRestrictionRanges                  *string                                 `url:"ip_restriction_ranges,omitempty" json:"ip_restriction_ranges,omitempty"`
 	AllowedEmailDomainsList              *string                                 `url:"allowed_email_domains_list,omitempty" json:"allowed_email_domains_list,omitempty"`
 	WikiAccessLevel                      *AccessControlValue                     `url:"wiki_access_level,omitempty" json:"wiki_access_level,omitempty"`
+
+	OnlyAllowMergeIfPipelineSucceeds          *bool `url:"only_allow_merge_if_pipeline_succeeds,omitempty" json:"only_allow_merge_if_pipeline_succeeds,omitempty"`
+	AllowMergeOnSkippedPipeline               *bool `url:"allow_merge_on_skipped_pipeline,omitempty" json:"allow_merge_on_skipped_pipeline,omitempty"`
+	OnlyAllowMergeIfAllDiscussionsAreResolved *bool `url:"only_allow_merge_if_all_discussions_are_resolved,omitempty" json:"only_allow_merge_if_all_discussions_are_resolved,omitempty"`
 
 	// Deprecated: Use EmailsEnabled instead
 	EmailsDisabled *bool `url:"emails_disabled,omitempty" json:"emails_disabled,omitempty"`
