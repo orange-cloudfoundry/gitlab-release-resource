@@ -55,6 +55,7 @@ linters:
         - name: struct-tag
         - name: time-date
         - name: unused-parameter
+        - name: use-errors-new
         - name: var-naming
     staticcheck:
       checks:
