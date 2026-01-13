@@ -1414,6 +1414,7 @@ type ProjectHook struct {
 	ReleasesEvents            bool                `json:"releases_events"`
 	MilestoneEvents           bool                `json:"milestone_events"`
 	FeatureFlagEvents         bool                `json:"feature_flag_events"`
+	EmojiEvents               bool                `json:"emoji_events"`
 	EnableSSLVerification     bool                `json:"enable_ssl_verification"`
 	RepositoryUpdateEvents    bool                `json:"repository_update_events"`
 	AlertStatus               string              `json:"alert_status"`
@@ -1502,6 +1503,7 @@ type AddProjectHookOptions struct {
 	PushEvents                *bool                `url:"push_events,omitempty" json:"push_events,omitempty"`
 	PushEventsBranchFilter    *string              `url:"push_events_branch_filter,omitempty" json:"push_events_branch_filter,omitempty"`
 	ReleasesEvents            *bool                `url:"releases_events,omitempty" json:"releases_events,omitempty"`
+	EmojiEvents               *bool                `url:"emoji_events,omitempty" json:"emoji_events,omitempty"`
 	TagPushEvents             *bool                `url:"tag_push_events,omitempty" json:"tag_push_events,omitempty"`
 	Token                     *string              `url:"token,omitempty" json:"token,omitempty"`
 	URL                       *string              `url:"url,omitempty" json:"url,omitempty"`
@@ -1555,6 +1557,7 @@ type EditProjectHookOptions struct {
 	PushEvents                *bool                `url:"push_events,omitempty" json:"push_events,omitempty"`
 	PushEventsBranchFilter    *string              `url:"push_events_branch_filter,omitempty" json:"push_events_branch_filter,omitempty"`
 	ReleasesEvents            *bool                `url:"releases_events,omitempty" json:"releases_events,omitempty"`
+	EmojiEvents               *bool                `url:"emoji_events,omitempty" json:"emoji_events,omitempty"`
 	TagPushEvents             *bool                `url:"tag_push_events,omitempty" json:"tag_push_events,omitempty"`
 	Token                     *string              `url:"token,omitempty" json:"token,omitempty"`
 	URL                       *string              `url:"url,omitempty" json:"url,omitempty"`
