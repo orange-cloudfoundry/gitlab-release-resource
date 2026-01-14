@@ -18,6 +18,7 @@ package gitlab
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -278,7 +279,7 @@ func ParseWebhook(eventType EventType, payload []byte) (event any, err error) {
 		case projectEvent:
 			event = &ProjectResourceAccessTokenEvent{}
 		default:
-			return nil, fmt.Errorf("unexpected resource access token payload")
+			return nil, errors.New("unexpected resource access token payload")
 		}
 	case EventTypeServiceHook:
 		service := &serviceEvent{}
