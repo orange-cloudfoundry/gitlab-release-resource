@@ -580,9 +580,12 @@ type EmailsOnPushServiceProperties struct {
 	Recipients             string `json:"recipients"`
 	DisableDiffs           bool   `json:"disable_diffs"`
 	SendFromCommitterEmail bool   `json:"send_from_committer_email"`
-	PushEvents             bool   `json:"push_events"`
-	TagPushEvents          bool   `json:"tag_push_events"`
 	BranchesToBeNotified   string `json:"branches_to_be_notified"`
+
+	// Deprecated: to be removed in 2.0 - use EmailsOnPushService.PushEvents instead.
+	PushEvents bool `json:"push_events"`
+	// Deprecated: to be removed in 2.0 - use EmailsOnPushService.TagPushEvents instead.
+	TagPushEvents bool `json:"tag_push_events"`
 }
 
 // GetEmailsOnPushService gets Emails on Push service settings for a project.

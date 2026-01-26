@@ -243,6 +243,7 @@ type Settings struct {
 	InactiveProjectsDeleteAfterMonths                     int64                     `json:"inactive_projects_delete_after_months"`
 	InactiveProjectsMinSizeMB                             int64                     `json:"inactive_projects_min_size_mb"`
 	InactiveProjectsSendWarningEmailAfterMonths           int64                     `json:"inactive_projects_send_warning_email_after_months"`
+	InactiveResourceAccessTokensDeleteAfterDays           int64                     `json:"inactive_resource_access_tokens_delete_after_days"`
 	IncludeOptionalMetricsInServicePing                   bool                      `json:"include_optional_metrics_in_service_ping"`
 	InProductMarketingEmailsEnabled                       bool                      `json:"in_product_marketing_emails_enabled"`
 	InvisibleCaptchaEnabled                               bool                      `json:"invisible_captcha_enabled"`
@@ -730,6 +731,7 @@ type UpdateSettingsOptions struct {
 	InactiveProjectsDeleteAfterMonths                     *int64                                  `url:"inactive_projects_delete_after_months,omitempty" json:"inactive_projects_delete_after_months,omitempty"`
 	InactiveProjectsMinSizeMB                             *int64                                  `url:"inactive_projects_min_size_mb,omitempty" json:"inactive_projects_min_size_mb,omitempty"`
 	InactiveProjectsSendWarningEmailAfterMonths           *int64                                  `url:"inactive_projects_send_warning_email_after_months,omitempty" json:"inactive_projects_send_warning_email_after_months,omitempty"`
+	InactiveResourceAccessTokensDeleteAfterDays           *int64                                  `url:"inactive_resource_access_tokens_delete_after_days,omitempty" json:"inactive_resource_access_tokens_delete_after_days,omitempty"`
 	IncludeOptionalMetricsInServicePing                   *bool                                   `url:"include_optional_metrics_in_service_ping,omitempty" json:"include_optional_metrics_in_service_ping,omitempty"`
 	InProductMarketingEmailsEnabled                       *bool                                   `url:"in_product_marketing_emails_enabled,omitempty" json:"in_product_marketing_emails_enabled,omitempty"`
 	InvisibleCaptchaEnabled                               *bool                                   `url:"invisible_captcha_enabled,omitempty" json:"invisible_captcha_enabled,omitempty"`
