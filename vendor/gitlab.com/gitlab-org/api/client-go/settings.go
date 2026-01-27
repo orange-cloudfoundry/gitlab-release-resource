@@ -243,6 +243,7 @@ type Settings struct {
 	InactiveProjectsDeleteAfterMonths                     int64                     `json:"inactive_projects_delete_after_months"`
 	InactiveProjectsMinSizeMB                             int64                     `json:"inactive_projects_min_size_mb"`
 	InactiveProjectsSendWarningEmailAfterMonths           int64                     `json:"inactive_projects_send_warning_email_after_months"`
+	InactiveResourceAccessTokensDeleteAfterDays           int64                     `json:"inactive_resource_access_tokens_delete_after_days"`
 	IncludeOptionalMetricsInServicePing                   bool                      `json:"include_optional_metrics_in_service_ping"`
 	InProductMarketingEmailsEnabled                       bool                      `json:"in_product_marketing_emails_enabled"`
 	InvisibleCaptchaEnabled                               bool                      `json:"invisible_captcha_enabled"`
@@ -521,18 +522,10 @@ func (s Settings) String() string {
 // GitLab API docs:
 // https://docs.gitlab.com/api/settings/#get-details-on-current-application-settings
 func (s *SettingsService) GetSettings(options ...RequestOptionFunc) (*Settings, *Response, error) {
-	req, err := s.client.NewRequest(http.MethodGet, "application/settings", nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	as := new(Settings)
-	resp, err := s.client.Do(req, as)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return as, resp, nil
+	return do[*Settings](s.client,
+		withPath("application/settings"),
+		withRequestOpts(options...),
+	)
 }
 
 // UpdateSettingsOptions represents the available UpdateSettings() options.
@@ -730,6 +723,7 @@ type UpdateSettingsOptions struct {
 	InactiveProjectsDeleteAfterMonths                     *int64                                  `url:"inactive_projects_delete_after_months,omitempty" json:"inactive_projects_delete_after_months,omitempty"`
 	InactiveProjectsMinSizeMB                             *int64                                  `url:"inactive_projects_min_size_mb,omitempty" json:"inactive_projects_min_size_mb,omitempty"`
 	InactiveProjectsSendWarningEmailAfterMonths           *int64                                  `url:"inactive_projects_send_warning_email_after_months,omitempty" json:"inactive_projects_send_warning_email_after_months,omitempty"`
+	InactiveResourceAccessTokensDeleteAfterDays           *int64                                  `url:"inactive_resource_access_tokens_delete_after_days,omitempty" json:"inactive_resource_access_tokens_delete_after_days,omitempty"`
 	IncludeOptionalMetricsInServicePing                   *bool                                   `url:"include_optional_metrics_in_service_ping,omitempty" json:"include_optional_metrics_in_service_ping,omitempty"`
 	InProductMarketingEmailsEnabled                       *bool                                   `url:"in_product_marketing_emails_enabled,omitempty" json:"in_product_marketing_emails_enabled,omitempty"`
 	InvisibleCaptchaEnabled                               *bool                                   `url:"invisible_captcha_enabled,omitempty" json:"invisible_captcha_enabled,omitempty"`
@@ -987,16 +981,10 @@ type BranchProtectionDefaultsOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/settings/#update-application-settings
 func (s *SettingsService) UpdateSettings(opt *UpdateSettingsOptions, options ...RequestOptionFunc) (*Settings, *Response, error) {
-	req, err := s.client.NewRequest(http.MethodPut, "application/settings", opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	as := new(Settings)
-	resp, err := s.client.Do(req, as)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return as, resp, nil
+	return do[*Settings](s.client,
+		withMethod(http.MethodPut),
+		withPath("application/settings"),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
