@@ -17,7 +17,8 @@
 package gitlab
 
 import (
-	"fmt"
+	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -150,6 +151,20 @@ func WithUserAgent(userAgent string) ClientOptionFunc {
 	}
 }
 
+// WithURLWarningLogger sets a custom logger for URL validation warnings.
+// By default, warnings are logged using slog.Default().
+// Pass slog.New(slog.NewTextHandler(io.Discard, nil)) to disable warnings.
+// TODO: Use slog.NewDiscardHandler() when we upgrade to Go 1.25+
+func WithURLWarningLogger(logger *slog.Logger) ClientOptionFunc {
+	return func(c *Client) error {
+		if logger == nil {
+			return errors.New("logger cannot be nil, use slog.New(slog.NewTextHandler(io.Discard, nil)) to discard warnings")
+		}
+		c.urlWarningLogger = logger
+		return nil
+	}
+}
+
 // WithCookieJar can be used to configure a cookie jar.
 func WithCookieJar(jar http.CookieJar) ClientOptionFunc {
 	return func(c *Client) error {
@@ -163,7 +178,7 @@ func WithCookieJar(jar http.CookieJar) ClientOptionFunc {
 func WithInterceptor(i Interceptor) ClientOptionFunc {
 	return func(c *Client) error {
 		if i == nil {
-			return fmt.Errorf("interceptor cannot be nil")
+			return errors.New("interceptor cannot be nil")
 		}
 		c.interceptors = append(c.interceptors, i)
 		return nil
