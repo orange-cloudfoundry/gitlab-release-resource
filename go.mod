@@ -17,12 +17,12 @@ require (
 	golang.org/x/time v0.14.0 // indirect
 )
 
-require gitlab.com/gitlab-org/api/client-go v1.9.1
+require gitlab.com/gitlab-org/api/client-go v1.25.0
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect

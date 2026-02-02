@@ -1,7 +1,6 @@
 package gitlab
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -152,13 +151,13 @@ func (s *TerraformStatesService) DownloadLatest(pid any, name string, options ..
 		return nil, nil, err
 	}
 
-	var b bytes.Buffer
-	resp, err := s.client.Do(req, &b)
+	preserver := &bodyPreserver{}
+	resp, err := s.client.Do(req, preserver)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return &b, resp, nil
+	return preserver.body, resp, nil
 }
 
 func (s *TerraformStatesService) Download(pid any, name string, serial uint64, options ...RequestOptionFunc) (io.Reader, *Response, error) {
@@ -173,83 +172,59 @@ func (s *TerraformStatesService) Download(pid any, name string, serial uint64, o
 		return nil, nil, err
 	}
 
-	var b bytes.Buffer
-	resp, err := s.client.Do(req, &b)
+	preserver := &bodyPreserver{}
+	resp, err := s.client.Do(req, preserver)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return &b, resp, nil
+	return preserver.body, resp, nil
 }
 
 // Delete deletes a single Terraform state
 //
 // GitLab API docs: https://docs.gitlab.com/user/infrastructure/iac/terraform_state/
 func (s *TerraformStatesService) Delete(pid any, name string, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	uri := fmt.Sprintf("projects/%s/terraform/state/%s", PathEscape(project), PathEscape(name))
-
-	req, err := s.client.NewRequest(http.MethodDelete, uri, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/terraform/state/%s", ProjectID{pid}, name),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // DeleteVersion deletes a single Terraform state version
 //
 // GitLab API docs: https://docs.gitlab.com/user/infrastructure/iac/terraform_state/
 func (s *TerraformStatesService) DeleteVersion(pid any, name string, serial uint64, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	uri := fmt.Sprintf("projects/%s/terraform/state/%s/versions/%d", PathEscape(project), PathEscape(name), serial)
-
-	req, err := s.client.NewRequest(http.MethodDelete, uri, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/terraform/state/%s/versions/%d", ProjectID{pid}, name, serial),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // Lock locks a single Terraform state
 //
 // GitLab API docs: https://docs.gitlab.com/user/infrastructure/iac/terraform_state/
 func (s *TerraformStatesService) Lock(pid any, name string, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	uri := fmt.Sprintf("projects/%s/terraform/state/%s/lock", PathEscape(project), PathEscape(name))
-
-	req, err := s.client.NewRequest(http.MethodPost, uri, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/terraform/state/%s/lock", ProjectID{pid}, name),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // Unlock unlocks a single Terraform state
 //
 // GitLab API docs: https://docs.gitlab.com/user/infrastructure/iac/terraform_state/
 func (s *TerraformStatesService) Unlock(pid any, name string, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	uri := fmt.Sprintf("projects/%s/terraform/state/%s/lock", PathEscape(project), PathEscape(name))
-
-	req, err := s.client.NewRequest(http.MethodDelete, uri, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/terraform/state/%s/lock", ProjectID{pid}, name),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }

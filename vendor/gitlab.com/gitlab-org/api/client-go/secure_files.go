@@ -14,7 +14,6 @@
 package gitlab
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -112,23 +111,11 @@ type ListProjectSecureFilesOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/secure_files/#list-project-secure-files
 func (s SecureFilesService) ListProjectSecureFiles(pid any, opt *ListProjectSecureFilesOptions, options ...RequestOptionFunc) ([]*SecureFile, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/secure_files", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var files []*SecureFile
-	resp, err := s.client.Do(req, &files)
-	if err != nil {
-		return nil, resp, err
-	}
-	return files, resp, nil
+	return do[[]*SecureFile](s.client,
+		withPath("projects/%s/secure_files", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ShowSecureFileDetails gets the details of a specific secure file in a project.
@@ -136,24 +123,10 @@ func (s SecureFilesService) ListProjectSecureFiles(pid any, opt *ListProjectSecu
 // GitLab API docs:
 // https://docs.gitlab.com/api/secure_files/#show-secure-file-details
 func (s SecureFilesService) ShowSecureFileDetails(pid any, id int64, options ...RequestOptionFunc) (*SecureFile, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/secure_files/%d", PathEscape(project), id)
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	file := new(SecureFile)
-	resp, err := s.client.Do(req, file)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return file, resp, nil
+	return do[*SecureFile](s.client,
+		withPath("projects/%s/secure_files/%d", ProjectID{pid}, id),
+		withRequestOpts(options...),
+	)
 }
 
 // CreateSecureFileOptions represents the available
@@ -206,13 +179,13 @@ func (s SecureFilesService) DownloadSecureFile(pid any, id int64, options ...Req
 		return nil, nil, err
 	}
 
-	var file bytes.Buffer
-	resp, err := s.client.Do(req, &file)
+	preserver := &bodyPreserver{}
+	resp, err := s.client.Do(req, preserver)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return &file, resp, err
+	return preserver.body, resp, err
 }
 
 // RemoveSecureFile removes a project's secure file.
@@ -220,16 +193,10 @@ func (s SecureFilesService) DownloadSecureFile(pid any, id int64, options ...Req
 // GitLab API docs:
 // https://docs.gitlab.com/api/secure_files/#remove-secure-file
 func (s SecureFilesService) RemoveSecureFile(pid any, id int64, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/secure_files/%d", PathEscape(project), id)
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/secure_files/%d", ProjectID{pid}, id),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
