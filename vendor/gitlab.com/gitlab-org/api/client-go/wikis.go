@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 )
 
 type (
@@ -28,24 +27,24 @@ type (
 		// When with_content is set, it also returns the content of the pages.
 		//
 		// GitLab API docs:
-		// https://docs.gitlab.com/api/wikis/#list-wiki-pages
+		// https://docs.gitlab.com/api/wikis/#list-all-wiki-pages
 		ListWikis(pid any, opt *ListWikisOptions, options ...RequestOptionFunc) ([]*Wiki, *Response, error)
 		// GetWikiPage gets a wiki page for a given project.
 		//
 		// GitLab API docs:
-		// https://docs.gitlab.com/api/wikis/#get-a-wiki-page
+		// https://docs.gitlab.com/api/wikis/#retrieve-a-wiki-page
 		GetWikiPage(pid any, slug string, opt *GetWikiPageOptions, options ...RequestOptionFunc) (*Wiki, *Response, error)
 		// CreateWikiPage creates a new wiki page for the given repository with
 		// the given title, slug, and content.
 		//
 		// GitLab API docs:
-		// https://docs.gitlab.com/api/wikis/#create-a-new-wiki-page
+		// https://docs.gitlab.com/api/wikis/#create-a-wiki-page
 		CreateWikiPage(pid any, opt *CreateWikiPageOptions, options ...RequestOptionFunc) (*Wiki, *Response, error)
 		// EditWikiPage Updates an existing wiki page. At least one parameter is
 		// required to update the wiki page.
 		//
 		// GitLab API docs:
-		// https://docs.gitlab.com/api/wikis/#edit-an-existing-wiki-page
+		// https://docs.gitlab.com/api/wikis/#update-a-wiki-page
 		EditWikiPage(pid any, slug string, opt *EditWikiPageOptions, options ...RequestOptionFunc) (*Wiki, *Response, error)
 		// DeleteWikiPage deletes a wiki page with a given slug.
 		//
@@ -120,24 +119,11 @@ type ListWikisOptions struct {
 }
 
 func (s *WikisService) ListWikis(pid any, opt *ListWikisOptions, options ...RequestOptionFunc) ([]*Wiki, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/wikis", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var ws []*Wiki
-	resp, err := s.client.Do(req, &ws)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ws, resp, nil
+	return do[[]*Wiki](s.client,
+		withPath("projects/%s/wikis", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // GetWikiPageOptions represents options to GetWikiPage
@@ -150,24 +136,11 @@ type GetWikiPageOptions struct {
 }
 
 func (s *WikisService) GetWikiPage(pid any, slug string, opt *GetWikiPageOptions, options ...RequestOptionFunc) (*Wiki, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/wikis/%s", PathEscape(project), url.PathEscape(slug))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	w := new(Wiki)
-	resp, err := s.client.Do(req, w)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return w, resp, nil
+	return do[*Wiki](s.client,
+		withPath("projects/%s/wikis/%s", ProjectID{pid}, slug),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // CreateWikiPageOptions represents options to CreateWikiPage.
@@ -181,24 +154,12 @@ type CreateWikiPageOptions struct {
 }
 
 func (s *WikisService) CreateWikiPage(pid any, opt *CreateWikiPageOptions, options ...RequestOptionFunc) (*Wiki, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/wikis", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	w := new(Wiki)
-	resp, err := s.client.Do(req, w)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return w, resp, nil
+	return do[*Wiki](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/wikis", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // EditWikiPageOptions represents options to EditWikiPage.
@@ -212,39 +173,21 @@ type EditWikiPageOptions struct {
 }
 
 func (s *WikisService) EditWikiPage(pid any, slug string, opt *EditWikiPageOptions, options ...RequestOptionFunc) (*Wiki, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/wikis/%s", PathEscape(project), url.PathEscape(slug))
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	w := new(Wiki)
-	resp, err := s.client.Do(req, w)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return w, resp, nil
+	return do[*Wiki](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/wikis/%s", ProjectID{pid}, slug),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 func (s *WikisService) DeleteWikiPage(pid any, slug string, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/wikis/%s", PathEscape(project), url.PathEscape(slug))
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/wikis/%s", ProjectID{pid}, slug),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // UploadWikiAttachmentOptions represents options to UploadWikiAttachment.

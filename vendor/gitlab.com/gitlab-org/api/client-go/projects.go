@@ -150,6 +150,7 @@ type Project struct {
 	PreventMergeWithoutJiraIssue              bool                                        `json:"prevent_merge_without_jira_issue"`
 	PrintingMergeRequestLinkEnabled           bool                                        `json:"printing_merge_request_link_enabled"`
 	LFSEnabled                                bool                                        `json:"lfs_enabled"`
+	MaxArtifactsSize                          int64                                       `json:"max_artifacts_size"`
 	RepositoryStorage                         string                                      `json:"repository_storage"`
 	RequestAccessEnabled                      bool                                        `json:"request_access_enabled"`
 	MergeMethod                               MergeMethodValue                            `json:"merge_method"`
@@ -262,10 +263,11 @@ type Project struct {
 //
 // GitLab API docs: https://docs.gitlab.com/api/projects/
 type ProjectSharedWithGroup struct {
-	GroupID          int64  `json:"group_id"`
-	GroupName        string `json:"group_name"`
-	GroupFullPath    string `json:"group_full_path"`
-	GroupAccessLevel int64  `json:"group_access_level"`
+	GroupID          int64    `json:"group_id"`
+	GroupName        string   `json:"group_name"`
+	GroupFullPath    string   `json:"group_full_path"`
+	GroupAccessLevel int64    `json:"group_access_level"`
+	ExpiresAt        *ISOTime `json:"expires_at"`
 }
 
 // BasicProject included in other service responses (such as todos).
@@ -455,18 +457,11 @@ type ListProjectsOptions struct {
 //
 // GitLab API docs: https://docs.gitlab.com/api/projects/#list-all-projects
 func (s *ProjectsService) ListProjects(opt *ListProjectsOptions, options ...RequestOptionFunc) ([]*Project, *Response, error) {
-	req, err := s.client.NewRequest(http.MethodGet, "projects", opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var p []*Project
-	resp, err := s.client.Do(req, &p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[[]*Project](s.client,
+		withPath("projects"),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ListUserProjects gets a list of projects for the given user.
@@ -474,24 +469,11 @@ func (s *ProjectsService) ListProjects(opt *ListProjectsOptions, options ...Requ
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#list-a-users-projects
 func (s *ProjectsService) ListUserProjects(uid any, opt *ListProjectsOptions, options ...RequestOptionFunc) ([]*Project, *Response, error) {
-	user, err := parseID(uid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("users/%s/projects", user)
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var p []*Project
-	resp, err := s.client.Do(req, &p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[[]*Project](s.client,
+		withPath("users/%s/projects", UserID{uid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ListUserContributedProjects gets a list of visible projects a given user has contributed to.
@@ -499,24 +481,11 @@ func (s *ProjectsService) ListUserProjects(uid any, opt *ListProjectsOptions, op
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#list-projects-a-user-has-contributed-to
 func (s *ProjectsService) ListUserContributedProjects(uid any, opt *ListProjectsOptions, options ...RequestOptionFunc) ([]*Project, *Response, error) {
-	user, err := parseID(uid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("users/%s/contributed_projects", user)
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var p []*Project
-	resp, err := s.client.Do(req, &p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[[]*Project](s.client,
+		withPath("users/%s/contributed_projects", UserID{uid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ListUserStarredProjects gets a list of projects starred by the given user.
@@ -524,24 +493,11 @@ func (s *ProjectsService) ListUserContributedProjects(uid any, opt *ListProjects
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_starring/#list-projects-starred-by-a-user
 func (s *ProjectsService) ListUserStarredProjects(uid any, opt *ListProjectsOptions, options ...RequestOptionFunc) ([]*Project, *Response, error) {
-	user, err := parseID(uid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("users/%s/starred_projects", user)
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var p []*Project
-	resp, err := s.client.Do(req, &p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[[]*Project](s.client,
+		withPath("users/%s/starred_projects", UserID{uid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ProjectUser represents a GitLab project user.
@@ -567,24 +523,11 @@ type ListProjectUserOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#list-users
 func (s *ProjectsService) ListProjectsUsers(pid any, opt *ListProjectUserOptions, options ...RequestOptionFunc) ([]*ProjectUser, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/users", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var p []*ProjectUser
-	resp, err := s.client.Do(req, &p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[[]*ProjectUser](s.client,
+		withPath("projects/%s/users", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ProjectGroup represents a GitLab project group.
@@ -615,24 +558,11 @@ type ListProjectGroupOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#list-groups
 func (s *ProjectsService) ListProjectsGroups(pid any, opt *ListProjectGroupOptions, options ...RequestOptionFunc) ([]*ProjectGroup, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/groups", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var p []*ProjectGroup
-	resp, err := s.client.Do(req, &p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[[]*ProjectGroup](s.client,
+		withPath("projects/%s/groups", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ProjectLanguages is a map of strings because the response is arbitrary
@@ -646,24 +576,10 @@ type ProjectLanguages map[string]float32
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#list-programming-languages-used
 func (s *ProjectsService) GetProjectLanguages(pid any, options ...RequestOptionFunc) (*ProjectLanguages, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/languages", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(ProjectLanguages)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*ProjectLanguages](s.client,
+		withPath("projects/%s/languages", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // GetProjectOptions represents the available GetProject() options.
@@ -681,24 +597,11 @@ type GetProjectOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#get-a-single-project
 func (s *ProjectsService) GetProject(pid any, opt *GetProjectOptions, options ...RequestOptionFunc) (*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Project)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Project](s.client,
+		withPath("projects/%s", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // CreateProjectOptions represents the available CreateProject() options.
@@ -971,6 +874,7 @@ type EditProjectOptions struct {
 	IssuesTemplate                            *string                                      `url:"issues_template,omitempty" json:"issues_template,omitempty"`
 	KeepLatestArtifact                        *bool                                        `url:"keep_latest_artifact,omitempty" json:"keep_latest_artifact,omitempty"`
 	LFSEnabled                                *bool                                        `url:"lfs_enabled,omitempty" json:"lfs_enabled,omitempty"`
+	MaxArtifactsSize                          *int64                                       `url:"max_artifacts_size,omitempty" json:"max_artifacts_size,omitempty"`
 	MergeCommitTemplate                       *string                                      `url:"merge_commit_template,omitempty" json:"merge_commit_template,omitempty"`
 	MergeRequestDefaultTargetSelf             *bool                                        `url:"mr_default_target_self,omitempty" json:"mr_default_target_self,omitempty"`
 	MergeMethod                               *MergeMethodValue                            `url:"merge_method,omitempty" json:"merge_method,omitempty"`
@@ -1114,24 +1018,12 @@ type ForkProjectOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_forks/#fork-a-project
 func (s *ProjectsService) ForkProject(pid any, opt *ForkProjectOptions, options ...RequestOptionFunc) (*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/fork", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Project)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Project](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/fork", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // StarProject stars a given the project.
@@ -1139,24 +1031,11 @@ func (s *ProjectsService) ForkProject(pid any, opt *ForkProjectOptions, options 
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_starring/#star-a-project
 func (s *ProjectsService) StarProject(pid any, options ...RequestOptionFunc) (*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/star", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Project)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Project](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/star", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // ListProjectInvitedGroupOptions represents the available
@@ -1177,24 +1056,11 @@ type ListProjectInvitedGroupOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#list-a-projects-invited-groups
 func (s *ProjectsService) ListProjectsInvitedGroups(pid any, opt *ListProjectInvitedGroupOptions, options ...RequestOptionFunc) ([]*ProjectGroup, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/invited_groups", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var pg []*ProjectGroup
-	resp, err := s.client.Do(req, &pg)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return pg, resp, nil
+	return do[[]*ProjectGroup](s.client,
+		withPath("projects/%s/invited_groups", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // UnstarProject unstars a given project.
@@ -1202,24 +1068,11 @@ func (s *ProjectsService) ListProjectsInvitedGroups(pid any, opt *ListProjectInv
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_starring/#unstar-a-project
 func (s *ProjectsService) UnstarProject(pid any, options ...RequestOptionFunc) (*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/unstar", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Project)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Project](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/unstar", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // ArchiveProject archives the project if the user is either admin or the
@@ -1228,24 +1081,11 @@ func (s *ProjectsService) UnstarProject(pid any, options ...RequestOptionFunc) (
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#archive-a-project
 func (s *ProjectsService) ArchiveProject(pid any, options ...RequestOptionFunc) (*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/archive", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Project)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Project](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/archive", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // UnarchiveProject unarchives the project if the user is either admin or
@@ -1254,24 +1094,11 @@ func (s *ProjectsService) ArchiveProject(pid any, options ...RequestOptionFunc) 
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#unarchive-a-project
 func (s *ProjectsService) UnarchiveProject(pid any, options ...RequestOptionFunc) (*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/unarchive", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Project)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Project](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/unarchive", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // RestoreProject restores a project that is marked for deletion.
@@ -1279,24 +1106,11 @@ func (s *ProjectsService) UnarchiveProject(pid any, options ...RequestOptionFunc
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#restore-a-project-marked-for-deletion
 func (s *ProjectsService) RestoreProject(pid any, options ...RequestOptionFunc) (*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/restore", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Project)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Project](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/restore", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // DeleteProjectOptions represents the available DeleteProject() options.
@@ -1314,18 +1128,13 @@ type DeleteProjectOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#delete-a-project
 func (s *ProjectsService) DeleteProject(pid any, opt *DeleteProjectOptions, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, opt, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // ShareWithGroupOptions represents the available SharedWithGroup() options.
@@ -1341,18 +1150,13 @@ type ShareWithGroupOptions struct {
 //
 // GitLab API docs: https://docs.gitlab.com/api/projects/#share-a-project-with-a-group
 func (s *ProjectsService) ShareProjectWithGroup(pid any, opt *ShareWithGroupOptions, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/share", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/share", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // DeleteSharedProjectFromGroup allows to unshare a project from a group.
@@ -1360,18 +1164,12 @@ func (s *ProjectsService) ShareProjectWithGroup(pid any, opt *ShareWithGroupOpti
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#delete-a-shared-project-link-in-a-group
 func (s *ProjectsService) DeleteSharedProjectFromGroup(pid any, groupID int64, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/share/%d", PathEscape(project), groupID)
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/share/%d", ProjectID{pid}, groupID),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // HookCustomHeader represents a project or group hook custom header
@@ -1414,6 +1212,7 @@ type ProjectHook struct {
 	ReleasesEvents            bool                `json:"releases_events"`
 	MilestoneEvents           bool                `json:"milestone_events"`
 	FeatureFlagEvents         bool                `json:"feature_flag_events"`
+	EmojiEvents               bool                `json:"emoji_events"`
 	EnableSSLVerification     bool                `json:"enable_ssl_verification"`
 	RepositoryUpdateEvents    bool                `json:"repository_update_events"`
 	AlertStatus               string              `json:"alert_status"`
@@ -1423,6 +1222,8 @@ type ProjectHook struct {
 	ResourceAccessTokenEvents bool                `json:"resource_access_token_events"`
 	CustomWebhookTemplate     string              `json:"custom_webhook_template"`
 	CustomHeaders             []*HookCustomHeader `json:"custom_headers"`
+	VulnerabilityEvents       bool                `json:"vulnerability_events"`
+	BranchFilterStrategy      string              `json:"branch_filter_strategy"`
 }
 
 // ListProjectHooksOptions represents the available ListProjectHooks() options.
@@ -1438,24 +1239,11 @@ type ListProjectHooksOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#list-webhooks-for-a-project
 func (s *ProjectsService) ListProjectHooks(pid any, opt *ListProjectHooksOptions, options ...RequestOptionFunc) ([]*ProjectHook, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var ph []*ProjectHook
-	resp, err := s.client.Do(req, &ph)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ph, resp, nil
+	return do[[]*ProjectHook](s.client,
+		withPath("projects/%s/hooks", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // GetProjectHook gets a specific hook for a project.
@@ -1463,24 +1251,10 @@ func (s *ProjectsService) ListProjectHooks(pid any, opt *ListProjectHooksOptions
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#get-a-project-webhook
 func (s *ProjectsService) GetProjectHook(pid any, hook int64, options ...RequestOptionFunc) (*ProjectHook, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks/%d", PathEscape(project), hook)
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ph := new(ProjectHook)
-	resp, err := s.client.Do(req, ph)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ph, resp, nil
+	return do[*ProjectHook](s.client,
+		withPath("projects/%s/hooks/%d", ProjectID{pid}, hook),
+		withRequestOpts(options...),
+	)
 }
 
 // AddProjectHookOptions represents the available AddProjectHook() options.
@@ -1502,6 +1276,7 @@ type AddProjectHookOptions struct {
 	PushEvents                *bool                `url:"push_events,omitempty" json:"push_events,omitempty"`
 	PushEventsBranchFilter    *string              `url:"push_events_branch_filter,omitempty" json:"push_events_branch_filter,omitempty"`
 	ReleasesEvents            *bool                `url:"releases_events,omitempty" json:"releases_events,omitempty"`
+	EmojiEvents               *bool                `url:"emoji_events,omitempty" json:"emoji_events,omitempty"`
 	TagPushEvents             *bool                `url:"tag_push_events,omitempty" json:"tag_push_events,omitempty"`
 	Token                     *string              `url:"token,omitempty" json:"token,omitempty"`
 	URL                       *string              `url:"url,omitempty" json:"url,omitempty"`
@@ -1509,6 +1284,8 @@ type AddProjectHookOptions struct {
 	ResourceAccessTokenEvents *bool                `url:"resource_access_token_events,omitempty" json:"resource_access_token_events,omitempty"`
 	CustomWebhookTemplate     *string              `url:"custom_webhook_template,omitempty" json:"custom_webhook_template,omitempty"`
 	CustomHeaders             *[]*HookCustomHeader `url:"custom_headers,omitempty" json:"custom_headers,omitempty"`
+	VulnerabilityEvents       *bool                `url:"vulnerability_events,omitempty" json:"vulnerability_events,omitempty"`
+	BranchFilterStrategy      *string              `url:"branch_filter_strategy,omitempty" json:"branch_filter_strategy,omitempty"`
 }
 
 // AddProjectHook adds a hook to a specified project.
@@ -1516,24 +1293,12 @@ type AddProjectHookOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#add-a-webhook-to-a-project
 func (s *ProjectsService) AddProjectHook(pid any, opt *AddProjectHookOptions, options ...RequestOptionFunc) (*ProjectHook, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ph := new(ProjectHook)
-	resp, err := s.client.Do(req, ph)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ph, resp, nil
+	return do[*ProjectHook](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/hooks", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // EditProjectHookOptions represents the available EditProjectHook() options.
@@ -1555,6 +1320,7 @@ type EditProjectHookOptions struct {
 	PushEvents                *bool                `url:"push_events,omitempty" json:"push_events,omitempty"`
 	PushEventsBranchFilter    *string              `url:"push_events_branch_filter,omitempty" json:"push_events_branch_filter,omitempty"`
 	ReleasesEvents            *bool                `url:"releases_events,omitempty" json:"releases_events,omitempty"`
+	EmojiEvents               *bool                `url:"emoji_events,omitempty" json:"emoji_events,omitempty"`
 	TagPushEvents             *bool                `url:"tag_push_events,omitempty" json:"tag_push_events,omitempty"`
 	Token                     *string              `url:"token,omitempty" json:"token,omitempty"`
 	URL                       *string              `url:"url,omitempty" json:"url,omitempty"`
@@ -1562,6 +1328,8 @@ type EditProjectHookOptions struct {
 	ResourceAccessTokenEvents *bool                `url:"resource_access_token_events,omitempty" json:"resource_access_token_events,omitempty"`
 	CustomWebhookTemplate     *string              `url:"custom_webhook_template,omitempty" json:"custom_webhook_template,omitempty"`
 	CustomHeaders             *[]*HookCustomHeader `url:"custom_headers,omitempty" json:"custom_headers,omitempty"`
+	VulnerabilityEvents       *bool                `url:"vulnerability_events,omitempty" json:"vulnerability_events,omitempty"`
+	BranchFilterStrategy      *string              `url:"branch_filter_strategy,omitempty" json:"branch_filter_strategy,omitempty"`
 }
 
 // EditProjectHook edits a hook for a specified project.
@@ -1569,24 +1337,12 @@ type EditProjectHookOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#edit-a-project-webhook
 func (s *ProjectsService) EditProjectHook(pid any, hook int64, opt *EditProjectHookOptions, options ...RequestOptionFunc) (*ProjectHook, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks/%d", PathEscape(project), hook)
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ph := new(ProjectHook)
-	resp, err := s.client.Do(req, ph)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ph, resp, nil
+	return do[*ProjectHook](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/hooks/%d", ProjectID{pid}, hook),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // DeleteProjectHook removes a hook from a project. This is an idempotent
@@ -1595,18 +1351,12 @@ func (s *ProjectsService) EditProjectHook(pid any, hook int64, opt *EditProjectH
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#delete-project-webhook
 func (s *ProjectsService) DeleteProjectHook(pid any, hook int64, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks/%d", PathEscape(project), hook)
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/hooks/%d", ProjectID{pid}, hook),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // TriggerTestProjectHook Trigger a test hook for a specified project.
@@ -1622,18 +1372,12 @@ func (s *ProjectsService) DeleteProjectHook(pid any, hook int64, options ...Requ
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#trigger-a-test-project-webhook
 func (s *ProjectsService) TriggerTestProjectHook(pid any, hook int64, event ProjectHookEvent, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks/%d/test/%s", PathEscape(project), hook, string(event))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/hooks/%d/test/%s", ProjectID{pid}, hook, string(event)),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // SetHookCustomHeaderOptions represents the available SetProjectCustomHeader()
@@ -1650,18 +1394,13 @@ type SetHookCustomHeaderOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#set-a-custom-header
 func (s *ProjectsService) SetProjectCustomHeader(pid any, hook int64, key string, opt *SetHookCustomHeaderOptions, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks/%d/custom_headers/%s", PathEscape(project), hook, key)
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/hooks/%d/custom_headers/%s", ProjectID{pid}, hook, key),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // DeleteProjectCustomHeader deletes a project custom webhook header.
@@ -1669,18 +1408,12 @@ func (s *ProjectsService) SetProjectCustomHeader(pid any, hook int64, key string
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#delete-a-custom-header
 func (s *ProjectsService) DeleteProjectCustomHeader(pid any, hook int64, key string, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks/%d/custom_headers/%s", PathEscape(project), hook, key)
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/hooks/%d/custom_headers/%s", ProjectID{pid}, hook, key),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // SetProjectWebhookURLVariableOptions represents the available
@@ -1697,18 +1430,13 @@ type SetProjectWebhookURLVariableOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#set-a-url-variable
 func (s *ProjectsService) SetProjectWebhookURLVariable(pid any, hook int64, key string, opt *SetProjectWebhookURLVariableOptions, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks/%d/url_variables/%s", PathEscape(project), hook, PathEscape(key))
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/hooks/%d/url_variables/%s", ProjectID{pid}, hook, key),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // DeleteProjectWebhookURLVariable deletes a project webhook URL variable.
@@ -1716,18 +1444,12 @@ func (s *ProjectsService) SetProjectWebhookURLVariable(pid any, hook int64, key 
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_webhooks/#delete-a-url-variable
 func (s *ProjectsService) DeleteProjectWebhookURLVariable(pid any, hook int64, key string, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/hooks/%d/url_variables/%s", PathEscape(project), hook, PathEscape(key))
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/hooks/%d/url_variables/%s", ProjectID{pid}, hook, key),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // ProjectForkRelation represents a project fork relationship.
@@ -1748,24 +1470,11 @@ type ProjectForkRelation struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_forks/#create-a-fork-relationship-between-projects
 func (s *ProjectsService) CreateProjectForkRelation(pid any, fork int64, options ...RequestOptionFunc) (*ProjectForkRelation, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/fork/%d", PathEscape(project), fork)
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pfr := new(ProjectForkRelation)
-	resp, err := s.client.Do(req, pfr)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return pfr, resp, nil
+	return do[*ProjectForkRelation](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/fork/%d", ProjectID{pid}, fork),
+		withRequestOpts(options...),
+	)
 }
 
 // DeleteProjectForkRelation deletes an existing forked from relationship.
@@ -1773,18 +1482,12 @@ func (s *ProjectsService) CreateProjectForkRelation(pid any, fork int64, options
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_forks/#delete-a-fork-relationship-between-projects
 func (s *ProjectsService) DeleteProjectForkRelation(pid any, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/fork", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/fork", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // UploadAvatar uploads an avatar.
@@ -1850,24 +1553,11 @@ func (s *ProjectsService) DownloadAvatar(pid any, options ...RequestOptionFunc) 
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_forks/#list-forks-of-a-project
 func (s *ProjectsService) ListProjectForks(pid any, opt *ListProjectsOptions, options ...RequestOptionFunc) ([]*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/forks", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var forks []*Project
-	resp, err := s.client.Do(req, &forks)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return forks, resp, nil
+	return do[[]*Project](s.client,
+		withPath("projects/%s/forks", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ProjectPushRules represents a project push rule.
@@ -1898,24 +1588,10 @@ type ProjectPushRules struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_push_rules/#get-project-push-rules
 func (s *ProjectsService) GetProjectPushRules(pid any, options ...RequestOptionFunc) (*ProjectPushRules, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/push_rule", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ppr := new(ProjectPushRules)
-	resp, err := s.client.Do(req, ppr)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ppr, resp, nil
+	return do[*ProjectPushRules](s.client,
+		withPath("projects/%s/push_rule", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // AddProjectPushRuleOptions represents the available AddProjectPushRule()
@@ -1944,24 +1620,12 @@ type AddProjectPushRuleOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_push_rules/#add-a-project-push-rule
 func (s *ProjectsService) AddProjectPushRule(pid any, opt *AddProjectPushRuleOptions, options ...RequestOptionFunc) (*ProjectPushRules, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/push_rule", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ppr := new(ProjectPushRules)
-	resp, err := s.client.Do(req, ppr)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ppr, resp, nil
+	return do[*ProjectPushRules](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/push_rule", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // EditProjectPushRuleOptions represents the available EditProjectPushRule()
@@ -1990,24 +1654,12 @@ type EditProjectPushRuleOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_push_rules/#edit-project-push-rule
 func (s *ProjectsService) EditProjectPushRule(pid any, opt *EditProjectPushRuleOptions, options ...RequestOptionFunc) (*ProjectPushRules, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/push_rule", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ppr := new(ProjectPushRules)
-	resp, err := s.client.Do(req, ppr)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ppr, resp, nil
+	return do[*ProjectPushRules](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/push_rule", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // DeleteProjectPushRule removes a push rule from a project. This is an
@@ -2017,18 +1669,12 @@ func (s *ProjectsService) EditProjectPushRule(pid any, opt *EditProjectPushRuleO
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_push_rules/#delete-project-push-rule
 func (s *ProjectsService) DeleteProjectPushRule(pid any, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/push_rule", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/push_rule", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // ProjectApprovals represents GitLab project level merge request approvals.
@@ -2054,24 +1700,10 @@ type ProjectApprovals struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/merge_request_approvals/#project-approval-rules
 func (s *ProjectsService) GetApprovalConfiguration(pid any, options ...RequestOptionFunc) (*ProjectApprovals, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/approvals", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pa := new(ProjectApprovals)
-	resp, err := s.client.Do(req, pa)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return pa, resp, nil
+	return do[*ProjectApprovals](s.client,
+		withPath("projects/%s/approvals", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // ChangeApprovalConfigurationOptions represents the available
@@ -2096,24 +1728,12 @@ type ChangeApprovalConfigurationOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/merge_request_approvals/#change-configuration
 func (s *ProjectsService) ChangeApprovalConfiguration(pid any, opt *ChangeApprovalConfigurationOptions, options ...RequestOptionFunc) (*ProjectApprovals, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/approvals", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pa := new(ProjectApprovals)
-	resp, err := s.client.Do(req, pa)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return pa, resp, nil
+	return do[*ProjectApprovals](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/approvals", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // GetProjectApprovalRulesListsOptions represents the available
@@ -2130,24 +1750,11 @@ type GetProjectApprovalRulesListsOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/merge_request_approvals/#get-all-approval-rules-for-project
 func (s *ProjectsService) GetProjectApprovalRules(pid any, opt *GetProjectApprovalRulesListsOptions, options ...RequestOptionFunc) ([]*ProjectApprovalRule, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/approval_rules", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var par []*ProjectApprovalRule
-	resp, err := s.client.Do(req, &par)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return par, resp, nil
+	return do[[]*ProjectApprovalRule](s.client,
+		withPath("projects/%s/approval_rules", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // GetProjectApprovalRule gets the project level approvers.
@@ -2155,24 +1762,10 @@ func (s *ProjectsService) GetProjectApprovalRules(pid any, opt *GetProjectApprov
 // GitLab API docs:
 // https://docs.gitlab.com/api/merge_request_approvals/#get-single-approval-rule-for-project
 func (s *ProjectsService) GetProjectApprovalRule(pid any, ruleID int64, options ...RequestOptionFunc) (*ProjectApprovalRule, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/approval_rules/%d", PathEscape(project), ruleID)
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	par := new(ProjectApprovalRule)
-	resp, err := s.client.Do(req, &par)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return par, resp, nil
+	return do[*ProjectApprovalRule](s.client,
+		withPath("projects/%s/approval_rules/%d", ProjectID{pid}, ruleID),
+		withRequestOpts(options...),
+	)
 }
 
 // CreateProjectLevelRuleOptions represents the available CreateProjectApprovalRule()
@@ -2197,24 +1790,12 @@ type CreateProjectLevelRuleOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/merge_request_approvals/#create-project-approval-rule
 func (s *ProjectsService) CreateProjectApprovalRule(pid any, opt *CreateProjectLevelRuleOptions, options ...RequestOptionFunc) (*ProjectApprovalRule, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/approval_rules", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	par := new(ProjectApprovalRule)
-	resp, err := s.client.Do(req, &par)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return par, resp, nil
+	return do[*ProjectApprovalRule](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/approval_rules", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // UpdateProjectLevelRuleOptions represents the available UpdateProjectApprovalRule()
@@ -2237,24 +1818,12 @@ type UpdateProjectLevelRuleOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/merge_request_approvals/#update-project-approval-rule
 func (s *ProjectsService) UpdateProjectApprovalRule(pid any, approvalRule int64, opt *UpdateProjectLevelRuleOptions, options ...RequestOptionFunc) (*ProjectApprovalRule, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/approval_rules/%d", PathEscape(project), approvalRule)
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	par := new(ProjectApprovalRule)
-	resp, err := s.client.Do(req, &par)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return par, resp, nil
+	return do[*ProjectApprovalRule](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/approval_rules/%d", ProjectID{pid}, approvalRule),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // DeleteProjectApprovalRule deletes a project-level approval rule.
@@ -2262,18 +1831,12 @@ func (s *ProjectsService) UpdateProjectApprovalRule(pid any, approvalRule int64,
 // GitLab API docs:
 // https://docs.gitlab.com/api/merge_request_approvals/#delete-project-approval-rule
 func (s *ProjectsService) DeleteProjectApprovalRule(pid any, approvalRule int64, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/approval_rules/%d", PathEscape(project), approvalRule)
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/approval_rules/%d", ProjectID{pid}, approvalRule),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // ProjectPullMirrorDetails represent the details of the configuration pull
@@ -2301,24 +1864,10 @@ type ProjectPullMirrorDetails struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_pull_mirroring/#get-a-projects-pull-mirror-details
 func (s *ProjectsService) GetProjectPullMirrorDetails(pid any, options ...RequestOptionFunc) (*ProjectPullMirrorDetails, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/mirror/pull", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pmd := new(ProjectPullMirrorDetails)
-	resp, err := s.client.Do(req, pmd)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return pmd, resp, nil
+	return do[*ProjectPullMirrorDetails](s.client,
+		withPath("projects/%s/mirror/pull", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // ConfigureProjectPullMirrorOptions represents the available ConfigureProjectPullMirror() options.
@@ -2341,24 +1890,12 @@ type ConfigureProjectPullMirrorOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_pull_mirroring/#configure-pull-mirroring-for-a-project
 func (s *ProjectsService) ConfigureProjectPullMirror(pid any, opt *ConfigureProjectPullMirrorOptions, options ...RequestOptionFunc) (*ProjectPullMirrorDetails, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/mirror/pull", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pmd := new(ProjectPullMirrorDetails)
-	resp, err := s.client.Do(req, pmd)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return pmd, resp, nil
+	return do[*ProjectPullMirrorDetails](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/mirror/pull", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // StartMirroringProject start the pull mirroring process for a project.
@@ -2366,18 +1903,12 @@ func (s *ProjectsService) ConfigureProjectPullMirror(pid any, opt *ConfigureProj
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_pull_mirroring/#start-the-pull-mirroring-process-for-a-project
 func (s *ProjectsService) StartMirroringProject(pid any, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/mirror/pull", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/mirror/pull", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // TransferProjectOptions represents the available TransferProject() options.
@@ -2392,24 +1923,12 @@ type TransferProjectOptions struct {
 //
 // GitLab API docs: https://docs.gitlab.com/api/projects/#transfer-a-project-to-a-new-namespace
 func (s *ProjectsService) TransferProject(pid any, opt *TransferProjectOptions, options ...RequestOptionFunc) (*Project, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/transfer", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Project)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Project](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/transfer", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // StartHousekeepingProject start the Housekeeping task for a project.
@@ -2417,18 +1936,12 @@ func (s *ProjectsService) TransferProject(pid any, opt *TransferProjectOptions, 
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#start-the-housekeeping-task-for-a-project
 func (s *ProjectsService) StartHousekeepingProject(pid any, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/housekeeping", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/housekeeping", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // ProjectRepositoryStorage represents the repository storage information for a project.
@@ -2447,24 +1960,10 @@ type ProjectRepositoryStorage struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/projects/#get-the-path-to-repository-storage
 func (s *ProjectsService) GetRepositoryStorage(pid any, options ...RequestOptionFunc) (*ProjectRepositoryStorage, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/storage", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	prs := new(ProjectRepositoryStorage)
-	resp, err := s.client.Do(req, prs)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return prs, resp, nil
+	return do[*ProjectRepositoryStorage](s.client,
+		withPath("projects/%s/storage", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
 }
 
 // ProjectStarrer represents a user who starred a project.
@@ -2490,23 +1989,9 @@ type ListProjectStarrersOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_starring/#list-users-who-starred-a-project
 func (s *ProjectsService) ListProjectStarrers(pid any, opts *ListProjectStarrersOptions, options ...RequestOptionFunc) ([]*ProjectStarrer, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	u := fmt.Sprintf("projects/%s/starrers", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opts, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var starrers []*ProjectStarrer
-	resp, err := s.client.Do(req, &starrers)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return starrers, resp, nil
+	return do[[]*ProjectStarrer](s.client,
+		withPath("projects/%s/starrers", ProjectID{pid}),
+		withAPIOpts(opts),
+		withRequestOpts(options...),
+	)
 }

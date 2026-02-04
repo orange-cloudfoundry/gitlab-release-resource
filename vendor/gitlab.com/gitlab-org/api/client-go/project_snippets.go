@@ -54,24 +54,11 @@ type ListProjectSnippetsOptions struct {
 //
 // GitLab API docs: https://docs.gitlab.com/api/project_snippets/#list-snippets
 func (s *ProjectSnippetsService) ListSnippets(pid any, opt *ListProjectSnippetsOptions, options ...RequestOptionFunc) ([]*Snippet, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/snippets", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var ps []*Snippet
-	resp, err := s.client.Do(req, &ps)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ps, resp, nil
+	return do[[]*Snippet](s.client,
+		withPath("projects/%s/snippets", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // GetSnippet gets a single project snippet
@@ -79,24 +66,10 @@ func (s *ProjectSnippetsService) ListSnippets(pid any, opt *ListProjectSnippetsO
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_snippets/#single-snippet
 func (s *ProjectSnippetsService) GetSnippet(pid any, snippet int64, options ...RequestOptionFunc) (*Snippet, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/snippets/%d", PathEscape(project), snippet)
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ps := new(Snippet)
-	resp, err := s.client.Do(req, ps)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ps, resp, nil
+	return do[*Snippet](s.client,
+		withPath("projects/%s/snippets/%d", ProjectID{pid}, snippet),
+		withRequestOpts(options...),
+	)
 }
 
 // CreateProjectSnippetOptions represents the available CreateSnippet() options.
@@ -121,24 +94,12 @@ type CreateProjectSnippetOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_snippets/#create-new-snippet
 func (s *ProjectSnippetsService) CreateSnippet(pid any, opt *CreateProjectSnippetOptions, options ...RequestOptionFunc) (*Snippet, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/snippets", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPost, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ps := new(Snippet)
-	resp, err := s.client.Do(req, ps)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ps, resp, nil
+	return do[*Snippet](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/snippets", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // UpdateProjectSnippetOptions represents the available UpdateSnippet() options.
@@ -163,24 +124,12 @@ type UpdateProjectSnippetOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_snippets/#update-snippet
 func (s *ProjectSnippetsService) UpdateSnippet(pid any, snippet int64, opt *UpdateProjectSnippetOptions, options ...RequestOptionFunc) (*Snippet, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/snippets/%d", PathEscape(project), snippet)
-
-	req, err := s.client.NewRequest(http.MethodPut, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ps := new(Snippet)
-	resp, err := s.client.Do(req, ps)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return ps, resp, nil
+	return do[*Snippet](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/snippets/%d", ProjectID{pid}, snippet),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // DeleteSnippet deletes an existing project snippet. This is an idempotent
@@ -190,18 +139,12 @@ func (s *ProjectSnippetsService) UpdateSnippet(pid any, snippet int64, opt *Upda
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_snippets/#delete-snippet
 func (s *ProjectSnippetsService) DeleteSnippet(pid any, snippet int64, options ...RequestOptionFunc) (*Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/snippets/%d", PathEscape(project), snippet)
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/snippets/%d", ProjectID{pid}, snippet),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // SnippetContent returns the raw project snippet as plain text.

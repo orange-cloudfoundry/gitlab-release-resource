@@ -17,7 +17,6 @@
 package gitlab
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 )
@@ -65,18 +64,12 @@ type PagesDeployment struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/pages/#unpublish-pages
 func (s *PagesService) UnpublishPages(gid any, options ...RequestOptionFunc) (*Response, error) {
-	page, err := parseID(gid)
-	if err != nil {
-		return nil, err
-	}
-	u := fmt.Sprintf("projects/%s/pages", PathEscape(page))
-
-	req, err := s.client.NewRequest(http.MethodDelete, u, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
+	_, resp, err := do[none](s.client,
+		withMethod(http.MethodDelete),
+		withPath("projects/%s/pages", ProjectID{gid}),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
 
 // GetPages lists Pages settings for a project. The user must have at least
@@ -85,24 +78,10 @@ func (s *PagesService) UnpublishPages(gid any, options ...RequestOptionFunc) (*R
 // GitLab API Docs:
 // https://docs.gitlab.com/api/pages/#get-pages-settings-for-a-project
 func (s *PagesService) GetPages(gid any, options ...RequestOptionFunc) (*Pages, *Response, error) {
-	project, err := parseID(gid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/pages", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Pages)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Pages](s.client,
+		withPath("projects/%s/pages", ProjectID{gid}),
+		withRequestOpts(options...),
+	)
 }
 
 // UpdatePagesOptions represents the available UpdatePages() options.
@@ -120,22 +99,10 @@ type UpdatePagesOptions struct {
 // GitLab API Docs:
 // https://docs.gitlab.com/api/pages/#update-pages-settings-for-a-project
 func (s *PagesService) UpdatePages(pid any, opt UpdatePagesOptions, options ...RequestOptionFunc) (*Pages, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/pages", PathEscape(project))
-
-	req, err := s.client.NewRequest(http.MethodPatch, u, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := new(Pages)
-	resp, err := s.client.Do(req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
+	return do[*Pages](s.client,
+		withMethod(http.MethodPatch),
+		withPath("projects/%s/pages", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
