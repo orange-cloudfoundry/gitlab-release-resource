@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"math"
 	"math/rand"
@@ -74,6 +75,21 @@ const (
 
 var ErrNotFound = errors.New("404 Not Found")
 
+// URLValidationError wraps URL parsing errors with helpful context
+type URLValidationError struct {
+	URL  string
+	Err  error
+	Hint string
+}
+
+func (e *URLValidationError) Error() string {
+	msg := fmt.Sprintf("invalid base URL %q: %v", e.URL, e.Err)
+	if e.Hint != "" {
+		msg += fmt.Sprintf(" (hint: %s)", e.Hint)
+	}
+	return msg
+}
+
 // A Client manages communication with the GitLab API.
 type Client struct {
 	// HTTP client used to communicate with the API.
@@ -110,6 +126,9 @@ type Client struct {
 	// interceptors contain the stack of *http.Client round tripper builder func
 	// which are used to decorate the http.Client#Transport value.
 	interceptors []Interceptor
+
+	// urlWarningLogger is used to print URL validation warnings
+	urlWarningLogger *slog.Logger
 
 	// User agent used when communicating with the GitLab API.
 	UserAgent string
@@ -179,6 +198,7 @@ type Client struct {
 	GroupMembers                     GroupMembersServiceInterface
 	GroupMilestones                  GroupMilestonesServiceInterface
 	GroupProtectedEnvironments       GroupProtectedEnvironmentsServiceInterface
+	GroupProtectedBranches           GroupProtectedBranchesServiceInterface
 	GroupRelationsExport             GroupRelationsExportServiceInterface
 	GroupReleases                    GroupReleasesServiceInterface
 	GroupRepositoryStorageMove       GroupRepositoryStorageMoveServiceInterface
@@ -255,6 +275,8 @@ type Client struct {
 	ResourceMilestoneEvents          ResourceMilestoneEventsServiceInterface
 	ResourceStateEvents              ResourceStateEventsServiceInterface
 	ResourceWeightEvents             ResourceWeightEventsServiceInterface
+	RunnerControllers                RunnerControllersServiceInterface
+	RunnerControllerTokens           RunnerControllerTokensServiceInterface
 	Runners                          RunnersServiceInterface
 	Search                           SearchServiceInterface
 	SecureFiles                      SecureFilesServiceInterface
@@ -377,8 +399,9 @@ func NewOAuthClient(token string, options ...ClientOptionFunc) (*Client, error) 
 // NewAuthSourceClient returns a new GitLab API client that uses the AuthSource for authentication.
 func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, error) {
 	c := &Client{
-		UserAgent:  userAgent,
-		authSource: as,
+		UserAgent:        userAgent,
+		authSource:       as,
+		urlWarningLogger: slog.Default(),
 	}
 
 	// Configure the HTTP client.
@@ -495,6 +518,7 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 	c.GroupMembers = &GroupMembersService{client: c}
 	c.GroupMilestones = &GroupMilestonesService{client: c}
 	c.GroupProtectedEnvironments = &GroupProtectedEnvironmentsService{client: c}
+	c.GroupProtectedBranches = &GroupProtectedBranchesService{client: c}
 	c.GroupRelationsExport = &GroupRelationsExportService{client: c}
 	c.GroupReleases = &GroupReleasesService{client: c}
 	c.GroupRepositoryStorageMove = &GroupRepositoryStorageMoveService{client: c}
@@ -571,6 +595,8 @@ func NewAuthSourceClient(as AuthSource, options ...ClientOptionFunc) (*Client, e
 	c.ResourceMilestoneEvents = &ResourceMilestoneEventsService{client: c}
 	c.ResourceStateEvents = &ResourceStateEventsService{client: c}
 	c.ResourceWeightEvents = &ResourceWeightEventsService{client: c}
+	c.RunnerControllers = &RunnerControllersService{client: c}
+	c.RunnerControllerTokens = &RunnerControllerTokensService{client: c}
 	c.Runners = &RunnersService{client: c}
 	c.Search = &SearchService{client: c}
 	c.SecureFiles = &SecureFilesService{client: c}
@@ -794,16 +820,71 @@ func (c *Client) BaseURL() *url.URL {
 	return &u
 }
 
+// validateBaseURL checks for common real-world mistakes and returns them as errors.
+// Returns the parsed URL if validation succeeds.
+func validateBaseURL(baseURL string) (*url.URL, error) {
+	if baseURL == "" {
+		return nil, &URLValidationError{
+			URL:  baseURL,
+			Err:  errors.New("empty URL"),
+			Hint: `provide a valid GitLab instance URL (e.g., "https://gitlab.com")`,
+		}
+	}
+
+	if !strings.Contains(baseURL, "://") {
+		return nil, &URLValidationError{
+			URL:  baseURL,
+			Err:  errors.New("missing scheme"),
+			Hint: fmt.Sprintf(`try "https://%s"`, baseURL),
+		}
+	}
+
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, &URLValidationError{
+			URL: baseURL,
+			Err: err,
+			Hint: `possible issues:
+		  - missing hostname
+		  - invalid characters/spaces
+		  - invalid port (must be 1-65535)
+		  - query parameters (?)
+		  - fragments (#)
+		  - invalid URL encoding`,
+		}
+	}
+
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return nil, &URLValidationError{
+			URL:  baseURL,
+			Err:  fmt.Errorf("unsupported scheme %q", parsedURL.Scheme),
+			Hint: fmt.Sprintf(`GitLab API requires http or https (try "https://%s")`, parsedURL.Host),
+		}
+	}
+
+	return parsedURL, nil
+}
+
 // setBaseURL sets the base URL for API requests to a custom endpoint.
 func (c *Client) setBaseURL(urlStr string) error {
-	// Make sure the given URL end with a slash
+	// Make sure the given URL ends with a slash
 	if !strings.HasSuffix(urlStr, "/") {
 		urlStr += "/"
 	}
 
-	baseURL, err := url.Parse(urlStr)
+	// Validate and parse
+	baseURL, err := validateBaseURL(urlStr)
 	if err != nil {
-		return err
+		// Log the validation warning
+		c.urlWarningLogger.Warn("URL validation warning", "error", err)
+
+		// Don't return the error - just warn and continue
+		// Try to parse anyway as a fallback
+		baseURL, err = url.Parse(urlStr)
+		if err != nil {
+			// If we really can't parse it, we have to give up
+			return fmt.Errorf("failed to parse base URL: %w", err)
+		}
 	}
 
 	if !strings.HasSuffix(baseURL.Path, apiVersionPath) {
@@ -1180,9 +1261,8 @@ func (e *ErrorResponse) Error() string {
 
 	if e.Message == "" {
 		return fmt.Sprintf("%s %s: %d", e.Response.Request.Method, url, e.Response.StatusCode)
-	} else {
-		return fmt.Sprintf("%s %s: %d %s", e.Response.Request.Method, url, e.Response.StatusCode, e.Message)
 	}
+	return fmt.Sprintf("%s %s: %d %s", e.Response.Request.Method, url, e.Response.StatusCode, e.Message)
 }
 
 func (e *ErrorResponse) HasStatusCode(statusCode int) bool {
