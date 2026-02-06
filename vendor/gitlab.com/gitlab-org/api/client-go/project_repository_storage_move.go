@@ -17,7 +17,6 @@
 package gitlab
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 )
@@ -82,18 +81,11 @@ type RetrieveAllProjectStorageMovesOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_repository_storage_moves/#retrieve-all-project-repository-storage-moves
 func (p ProjectRepositoryStorageMoveService) RetrieveAllStorageMoves(opts RetrieveAllProjectStorageMovesOptions, options ...RequestOptionFunc) ([]*ProjectRepositoryStorageMove, *Response, error) {
-	req, err := p.client.NewRequest(http.MethodGet, "project_repository_storage_moves", opts, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var psms []*ProjectRepositoryStorageMove
-	resp, err := p.client.Do(req, &psms)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return psms, resp, err
+	return do[[]*ProjectRepositoryStorageMove](p.client,
+		withPath("project_repository_storage_moves"),
+		withAPIOpts(opts),
+		withRequestOpts(options...),
+	)
 }
 
 // RetrieveAllStorageMovesForProject retrieves all repository storage moves for
@@ -102,20 +94,11 @@ func (p ProjectRepositoryStorageMoveService) RetrieveAllStorageMoves(opts Retrie
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_repository_storage_moves/#retrieve-all-repository-storage-moves-for-a-project
 func (p ProjectRepositoryStorageMoveService) RetrieveAllStorageMovesForProject(project int64, opts RetrieveAllProjectStorageMovesOptions, options ...RequestOptionFunc) ([]*ProjectRepositoryStorageMove, *Response, error) {
-	u := fmt.Sprintf("projects/%d/repository_storage_moves", project)
-
-	req, err := p.client.NewRequest(http.MethodGet, u, opts, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var psms []*ProjectRepositoryStorageMove
-	resp, err := p.client.Do(req, &psms)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return psms, resp, err
+	return do[[]*ProjectRepositoryStorageMove](p.client,
+		withPath("projects/%d/repository_storage_moves", project),
+		withAPIOpts(opts),
+		withRequestOpts(options...),
+	)
 }
 
 // GetStorageMove gets a single project repository storage move.
@@ -123,20 +106,10 @@ func (p ProjectRepositoryStorageMoveService) RetrieveAllStorageMovesForProject(p
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_repository_storage_moves/#get-a-single-project-repository-storage-move
 func (p ProjectRepositoryStorageMoveService) GetStorageMove(repositoryStorage int64, options ...RequestOptionFunc) (*ProjectRepositoryStorageMove, *Response, error) {
-	u := fmt.Sprintf("project_repository_storage_moves/%d", repositoryStorage)
-
-	req, err := p.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	psm := new(ProjectRepositoryStorageMove)
-	resp, err := p.client.Do(req, psm)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return psm, resp, err
+	return do[*ProjectRepositoryStorageMove](p.client,
+		withPath("project_repository_storage_moves/%d", repositoryStorage),
+		withRequestOpts(options...),
+	)
 }
 
 // GetStorageMoveForProject gets a single repository storage move for a project.
@@ -144,20 +117,10 @@ func (p ProjectRepositoryStorageMoveService) GetStorageMove(repositoryStorage in
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_repository_storage_moves/#get-a-single-repository-storage-move-for-a-project
 func (p ProjectRepositoryStorageMoveService) GetStorageMoveForProject(project int64, repositoryStorage int64, options ...RequestOptionFunc) (*ProjectRepositoryStorageMove, *Response, error) {
-	u := fmt.Sprintf("projects/%d/repository_storage_moves/%d", project, repositoryStorage)
-
-	req, err := p.client.NewRequest(http.MethodGet, u, nil, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	psm := new(ProjectRepositoryStorageMove)
-	resp, err := p.client.Do(req, psm)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return psm, resp, err
+	return do[*ProjectRepositoryStorageMove](p.client,
+		withPath("projects/%d/repository_storage_moves/%d", project, repositoryStorage),
+		withRequestOpts(options...),
+	)
 }
 
 // ScheduleStorageMoveForProjectOptions represents the available
@@ -174,20 +137,12 @@ type ScheduleStorageMoveForProjectOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_repository_storage_moves/#schedule-a-repository-storage-move-for-a-project
 func (p ProjectRepositoryStorageMoveService) ScheduleStorageMoveForProject(project int64, opts ScheduleStorageMoveForProjectOptions, options ...RequestOptionFunc) (*ProjectRepositoryStorageMove, *Response, error) {
-	u := fmt.Sprintf("projects/%d/repository_storage_moves", project)
-
-	req, err := p.client.NewRequest(http.MethodPost, u, opts, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	psm := new(ProjectRepositoryStorageMove)
-	resp, err := p.client.Do(req, psm)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return psm, resp, err
+	return do[*ProjectRepositoryStorageMove](p.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%d/repository_storage_moves", project),
+		withAPIOpts(opts),
+		withRequestOpts(options...),
+	)
 }
 
 // ScheduleAllProjectStorageMovesOptions represents the available
@@ -205,10 +160,11 @@ type ScheduleAllProjectStorageMovesOptions struct {
 // GitLab API docs:
 // https://docs.gitlab.com/api/project_repository_storage_moves/#schedule-repository-storage-moves-for-all-projects-on-a-storage-shard
 func (p ProjectRepositoryStorageMoveService) ScheduleAllStorageMoves(opts ScheduleAllProjectStorageMovesOptions, options ...RequestOptionFunc) (*Response, error) {
-	req, err := p.client.NewRequest(http.MethodPost, "project_repository_storage_moves", opts, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return p.client.Do(req, nil)
+	_, resp, err := do[none](p.client,
+		withMethod(http.MethodPost),
+		withPath("project_repository_storage_moves"),
+		withAPIOpts(opts),
+		withRequestOpts(options...),
+	)
+	return resp, err
 }
