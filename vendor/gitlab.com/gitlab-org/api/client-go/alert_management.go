@@ -15,7 +15,6 @@
 package gitlab
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -83,24 +82,13 @@ type UploadMetricImageOptions struct {
 }
 
 func (s *AlertManagementService) UploadMetricImage(pid any, alertIID int64, content io.Reader, filename string, opt *UploadMetricImageOptions, options ...RequestOptionFunc) (*MetricImage, *Response, error) {
-	project, err := parseID(pid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("projects/%s/alert_management_alerts/%d/metric_images", PathEscape(project), alertIID)
-
-	req, err := s.client.UploadRequest(http.MethodPost, u, content, filename, UploadFile, opt, options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mi := new(MetricImage)
-	resp, err := s.client.Do(req, mi)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return mi, resp, nil
+	return do[*MetricImage](s.client,
+		withMethod(http.MethodPost),
+		withPath("projects/%s/alert_management_alerts/%d/metric_images", ProjectID{pid}, alertIID),
+		withUpload(content, filename, UploadFile),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
 }
 
 // ListMetricImagesOptions represents the available ListMetricImages() options.
