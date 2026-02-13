@@ -877,16 +877,10 @@ type BoolValue bool
 // https://github.com/gitlabhq/terraform-provider-gitlab/issues/348
 func (t *BoolValue) UnmarshalJSON(b []byte) error {
 	switch string(b) {
-	case `"1"`:
+	case `"1"`, `"true"`:
 		*t = true
 		return nil
-	case `"0"`:
-		*t = false
-		return nil
-	case `"true"`:
-		*t = true
-		return nil
-	case `"false"`:
+	case `"0"`, `"false"`:
 		*t = false
 		return nil
 	default:

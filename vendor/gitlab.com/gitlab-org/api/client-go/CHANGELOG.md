@@ -1,3 +1,471 @@
+## 1.33.0
+
+### 🚀 Features
+
+- Support unauthenticated clients via Unauthenticated auth source ([!2761](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2761)) by [Timo Furrer](https://gitlab.com/timofurrer)
+
+
+
+# [1.33.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.32.0...v1.33.0) (2026-02-13)
+
+## 1.32.0
+
+### 🚀 Features
+
+- Implement endpoints for runner controller scopes ([!2758](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2758)) by [Timo Furrer](https://gitlab.com/timofurrer)
+
+### 🔄 Other Changes
+
+- test(namespaces): Address test feedback to simplify the test ([!2744](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2744)) by [Patrick Rice](https://gitlab.com/PatrickRice)
+- chore(deps): update golangci/golangci-lint docker tag to v2.9.0 ([!2755](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2755)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+- chore(deps): update dependency golangci-lint to v2.9.0 ([!2754](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2754)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+
+
+
+# [1.32.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.31.0...v1.32.0) (2026-02-13)
+
+## 1.31.0
+
+### 🚀 Features
+
+- Add missing fields to emoji and milestone event types ([!2704](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2704)) by [Huijie Shi](https://gitlab.com/lcdlyxrqy)
+
+
+
+# [1.31.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.30.0...v1.31.0) (2026-02-11)
+
+## 1.30.0
+
+### 🚀 Features
+
+- Add missing query params to ListGroupsOptions ([!2726](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2726)) by [Mohamed Mongy](https://gitlab.com/mohamedmongy96)
+
+### 🔄 Other Changes
+
+- chore(deps): update module buf.build/go/protovalidate to v1.1.1 ([!2750](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2750)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+- docs(no-release): update url for community fork ([!2748](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2748)) by [Oleksandr Redko](https://gitlab.com/alexandear)
+
+
+
+# [1.30.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.29.0...v1.30.0) (2026-02-10)
+
+## 1.29.0
+
+### 🚀 Features
+
+- Update runner controllers to match latest state ([!2747](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2747)) by [Timo Furrer](https://gitlab.com/timofurrer)
+
+### 🔄 Other Changes
+
+- chore(deps): migrate from gopkg.in/yaml.v3 to go.yaml.in/yaml/v3 ([!2639](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2639)) by [Ville Skyttä](https://gitlab.com/scop)
+
+
+
+# [1.29.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.28.1...v1.29.0) (2026-02-09)
+
+## 1.28.1
+
+### 🐛 Bug Fixes
+
+- Fix error where GetNamespace double escaped URL-encoded projects ([!2743](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2743)) by [Patrick Rice](https://gitlab.com/PatrickRice)
+
+### 🔄 Other Changes
+
+- refactor: moved comments to interface ([!2716](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2716)) by [Zubeen](https://gitlab.com/syedzubeen)
+
+
+
+## [1.28.1](https://gitlab.com/gitlab-org/api/client-go/compare/v1.28.0...v1.28.1) (2026-02-06)
+
+## 1.28.0
+
+### 🚀 Features
+
+- Add `destroy` attribute for pipeline schedule inputs ([!2702](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2702)) by [long nguyen huy](https://gitlab.com/n.h.long.9697)
+
+### 🔄 Other Changes
+
+- Migrate bytes endpoints to new `do` pattern ([!2738](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2738)) by [Timo Furrer](https://gitlab.com/timofurrer)
+- docs(users): document the `Locked` and `State` fields ([!2741](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2741)) by [Florian Forster](https://gitlab.com/fforster)
+- ci: migrate to Danger from `common-ci-tasks` ([!2742](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2742)) by [Florian Forster](https://gitlab.com/fforster)
+- chore(oauth): improve the look of the OAuth confirmation page ([!2739](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2739)) by [Tomas Vik](https://gitlab.com/viktomas)
+
+
+
+# [1.28.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.27.0...v1.28.0) (2026-02-05)
+
+## 1.27.0
+
+### 🚀 Features
+
+- Trim leading `@` in user ids in `do()` requests paths ([!2736](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2736)) by [Timo Furrer](https://gitlab.com/timofurrer)
+
+### 🔄 Other Changes
+
+- Migrate endpoints with special status code handling to new `do` pattern ([!2733](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2733)) by [Timo Furrer](https://gitlab.com/timofurrer)
+- Support file uploads in `do()` request handler ([!2732](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2732)) by [Timo Furrer](https://gitlab.com/timofurrer)
+- Migrate more endpoints to the `do()` pattern ([!2731](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2731)) by [Timo Furrer](https://gitlab.com/timofurrer)
+- Revert "refactor(http): preserve response body without copying in multiple services" ([!2730](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2730)) by [Timo Furrer](https://gitlab.com/timofurrer)
+- chore(deps): update docker docker tag to v29.2.1 ([!2729](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2729)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+
+
+
+# [1.27.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.26.0...v1.27.0) (2026-02-04)
+
+## 1.26.0
+
+### 🚀 Features
+
+- Add slack integration support ([!2692](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2692)) by [Hamza Hassanain](https://gitlab.com/HamzaHassanain)
+
+### 🔄 Other Changes
+
+- refactor(no-release): fix minor revive issues ([!2711](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2711)) by [Oleksandr Redko](https://gitlab.com/alexandear)
+
+
+
+# [1.26.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.25.0...v1.26.0) (2026-02-03)
+
+## 1.25.0
+
+### 🚀 Features
+
+- feat(hooks): Add webexintegration ([!2707](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2707)) by [Preethi Atchudan](https://gitlab.com/preethiatchudan)
+
+### 🔄 Other Changes
+
+- fix: Fix broken GitLab docs anchors for Wikis API ([!2723](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2723)) by [Mohamed Othman](https://gitlab.com/mohamed.othman27)
+- refactor: moved comments to interface 7 ([!2715](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2715)) by [Zubeen](https://gitlab.com/syedzubeen)
+- chore(deps): update module github.com/google/cel-go to v0.27.0 ([!2721](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2721)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+- refactor: moved comments to interface 1 ([!2706](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2706)) by [Zubeen](https://gitlab.com/syedzubeen)
+- Refactor low complexity endpoints to use new `do` request function ([!2718](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2718)) by [Timo Furrer](https://gitlab.com/timofurrer)
+- Add some additional test coverage for functions before migrating to `do` ([!2720](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2720)) by [Patrick Rice](https://gitlab.com/PatrickRice)
+
+
+
+# [1.25.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.24.0...v1.25.0) (2026-02-01)
+
+
+### Bug Fixes
+
+* Fix broken GitLab docs anchors for Wikis API ([bdbb5c0](https://gitlab.com/gitlab-org/api/client-go/commit/bdbb5c0e93847846f6f786c93d649bec18db38e4))
+
+
+### Features
+
+* **hooks:** Add webexintegration ([857ac6a](https://gitlab.com/gitlab-org/api/client-go/commit/857ac6a82ff63a65ae4df221cf8347fed8946f53))
+
+## 1.24.0
+
+### 🚀 Features
+
+- Add assignee_id to issues api ([!2673](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2673)) by [David Schneider](https://gitlab.com/dvob)
+
+
+
+# [1.24.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.23.0...v1.24.0) (2026-01-29)
+
+## 1.23.0
+
+### 🚀 Features
+
+- feat: add group protected branches service ([!2685](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2685)) by [Prakash Divy](https://gitlab.com/prakashdivyy)
+
+### 🔄 Other Changes
+
+- chore(no-release): refactor to slog.DiscardHandler ([!2710](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2710)) by [Oleksandr Redko](https://gitlab.com/alexandear)
+
+
+
+# [1.23.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.22.1...v1.23.0) (2026-01-28)
+
+
+### Features
+
+* add group protected branches service ([c7ffe6f](https://gitlab.com/gitlab-org/api/client-go/commit/c7ffe6ff7bc12996ce27df767a706a253a3ce00b))
+
+## 1.22.1
+
+### 🐛 Bug Fixes
+
+- fix: Type Mismatch in UpdateSettingsOptions for SentryEnabled ([!2690](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2690)) by [Zubeen](https://gitlab.com/syedzubeen)
+
+### 🔄 Other Changes
+
+- fix: URL tags for throttle protected path settings in UpdateSettingsOptions ([!2705](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2705)) by [Zubeen](https://gitlab.com/syedzubeen)
+- test: Refactor tests to use testify assertions 7 ([!2700](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2700)) by [Zubeen](https://gitlab.com/syedzubeen)
+- test: Refactor tests to use testify assertions 4 ([!2696](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2696)) by [Zubeen](https://gitlab.com/syedzubeen)
+- test: Refactor tests to use testify assertions 3 ([!2695](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2695)) by [Zubeen](https://gitlab.com/syedzubeen)
+- test(no-release): Refactor tests to use testify assertions 2 ([!2694](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2694)) by [Zubeen](https://gitlab.com/syedzubeen)
+- test(no-release): Refactor tests to use testify assertions ([!2693](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2693)) by [Zubeen](https://gitlab.com/syedzubeen)
+- test(no-release): Refactor tests to use testify assertions 6 ([!2699](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2699)) by [Zubeen](https://gitlab.com/syedzubeen)
+
+
+
+## [1.22.1](https://gitlab.com/gitlab-org/api/client-go/compare/v1.22.0...v1.22.1) (2026-01-28)
+
+
+### Bug Fixes
+
+* Type Mismatch in UpdateSettingsOptions for SentryEnabled ([c2d3ca9](https://gitlab.com/gitlab-org/api/client-go/commit/c2d3ca98450719f615a951930153ad9fc2585b19))
+* URL tags for throttle protected path settings in UpdateSettingsOptions ([a4a525d](https://gitlab.com/gitlab-org/api/client-go/commit/a4a525dce32ba6aa80f45b48fbc0261e59cdabd3))
+
+## 1.22.0
+
+### 🚀 Features
+
+- feat(project_mirror): add ForceSyncProjectMirror ([!2683](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2683)) by [Prakash Divy](https://gitlab.com/prakashdivyy)
+
+### 🔄 Other Changes
+
+- test: Refactor tests to use testify assertions 5 ([!2697](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2697)) by [Zubeen](https://gitlab.com/syedzubeen)
+
+
+
+# [1.22.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.21.0...v1.22.0) (2026-01-28)
+
+
+### Features
+
+* **project_mirror:** add ForceSyncProjectMirror ([b13fcb7](https://gitlab.com/gitlab-org/api/client-go/commit/b13fcb79e6ffb454dc9fd7e332bde90c79a62376))
+
+## 1.21.0
+
+### 🚀 Features
+
+- feat(settings): Add AnonymousSearchesAllowed field support ([!2678](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2678)) by [Seif Hatem](https://gitlab.com/seif-hatem)
+
+### 🔄 Other Changes
+
+- feat: improve URL validation and error handling in client initialization ([!2656](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2656)) by [Amer Khaled](https://gitlab.com/amrkhald777)
+
+
+
+# [1.21.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.20.0...v1.21.0) (2026-01-27)
+
+
+### Features
+
+* improve URL validation and error handling in client initialization ([9417155](https://gitlab.com/gitlab-org/api/client-go/commit/9417155f9c8a5d7c044d052e61d8da5c91bbe57d))
+* **settings:** Add AnonymousSearchesAllowed field support ([7185888](https://gitlab.com/gitlab-org/api/client-go/commit/7185888208173e18216ecb353fdfebe91423f0c4))
+
+## 1.20.0
+
+### 🚀 Features
+
+- feat: update events ([!2689](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2689)) by [Huijie Shi](https://gitlab.com/lcdlyxrqy)
+
+### 🔄 Other Changes
+
+- chore(no-release): remove redundant build tag ([!2701](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2701)) by [Oleksandr Redko](https://gitlab.com/alexandear)
+- chore(deps): update docker docker tag to v29.2.0 ([!2698](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2698)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+
+
+
+# [1.20.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.19.0...v1.20.0) (2026-01-27)
+
+
+### Features
+
+* update events ([46ba91c](https://gitlab.com/gitlab-org/api/client-go/commit/46ba91cabfe7c13cf4f80738d48ca60b810f520a))
+
+## 1.19.0
+
+### 🚀 Features
+
+- feat(integrations): Add Chat & Notify integrations ([!2691](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2691)) by [Hamza Hassanain](https://gitlab.com/HamzaHassanain)
+
+### 🔄 Other Changes
+
+- refactor: use do function for requests ([!2674](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2674)) by [Timo Furrer](https://gitlab.com/timofurrer)
+- chore(docs): Update adding API support guide for new coding patterns ([!2688](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2688)) by [Heidi Berry](https://gitlab.com/heidi.berry)
+
+
+
+# [1.19.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.18.0...v1.19.0) (2026-01-26)
+
+
+### Features
+
+* **integrations:** Add Chat & Notify integrations ([cc692ed](https://gitlab.com/gitlab-org/api/client-go/commit/cc692edd6d8dfed55fd411559af7e53b55d4e2dd))
+* **mocks:** add streaming methods for various services ([889b407](https://gitlab.com/gitlab-org/api/client-go/commit/889b407e48432b32b4c1589102ceed6fadb857db))
+
+## 1.18.0
+
+### 🚀 Features
+
+- feat(settings): Added  support for inactive_resource_access_tokens_delete_after_days  to the... ([!2686](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2686)) by [Preethi Atchudan](https://gitlab.com/preethiatchudan)
+
+### 🔄 Other Changes
+
+- Add missing tests for refactored functions ([!2676](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2676)) by [Patrick Rice](https://gitlab.com/PatrickRice)
+
+
+
+# [1.18.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.17.0...v1.18.0) (2026-01-25)
+
+
+### Features
+
+* **settings:** Added  support for inactive_resource_access_tokens_delete_after_days  to the... ([52b60c3](https://gitlab.com/gitlab-org/api/client-go/commit/52b60c3345ef56cc18ae7e8e1e2dd7c9f7f71344))
+
+## 1.17.0
+
+### 🚀 Features
+
+- Add support for Group Mattermost integrations ([!2675](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2675)) by [Hamza Hassanain](https://gitlab.com/HamzaHassanain)
+
+
+
+# [1.17.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.16.0...v1.17.0) (2026-01-23)
+
+## 1.16.0
+
+### 🚀 Features
+
+- Add environment, deployed_after, and deployed_before params to merge requests options struct ([!2672](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2672)) by [Filip Aleksic](https://gitlab.com/faleksic)
+
+### 🔄 Other Changes
+
+- chore(deps): update module golang.org/x/oauth2 to v0.34.0 ([!2640](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2640)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+
+
+
+# [1.16.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.15.0...v1.16.0) (2026-01-20)
+
+## 1.15.0
+
+### 🚀 Features
+
+- Add ExpiresAt field to ProjectSharedWithGroup struct ([!2671](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2671)) by [cindy](https://gitlab.com/wscix)
+
+### 🔄 Other Changes
+
+- feat: convert examples to testable examples for pkg.go.dev ([!2655](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2655)) by [Amer Khaled](https://gitlab.com/amrkhald777)
+- refactor(no-release): enable usetesting linter ([!2664](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2664)) by [Oleksandr Redko](https://gitlab.com/alexandear)
+- chore(deps): update docker docker tag to v29.1.5 ([!2665](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2665)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+- Draft: Users: Fix GetUsersOptions naming inconsistency ([!2667](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2667)) by [Seif Hatem](https://gitlab.com/seif-hatem)
+
+
+
+# [1.15.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.14.0...v1.15.0) (2026-01-20)
+
+
+### Bug Fixes
+
+* Deprecate incorrect fields returned in response for Emails on Push integration ([71d747d](https://gitlab.com/gitlab-org/api/client-go/commit/71d747da9a297451911b0c4eb4850632a588e3e8))
+
+
+### Features
+
+* convert examples to testable examples for pkg.go.dev ([fee39f1](https://gitlab.com/gitlab-org/api/client-go/commit/fee39f1f21b264765bbbed80ba23265bd3f633a9))
+* **issue_links:** Add ID field to IssueLink struct ([8f813a8](https://gitlab.com/gitlab-org/api/client-go/commit/8f813a8a2e73c41bc81403aceb82d7d94e9ff684))
+
+## 1.14.0
+
+### 🚀 Features
+
+- feat(hooks): Add project hook support for vulnerability events and branch filter strategy ([!2658](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2658)) by [Heidi Berry](https://gitlab.com/heidi.berry)
+- Add max_artifacts_size parameter to groups and projects ([!2652](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2652)) by [Betty Godier](https://gitlab.com/betty-godier)
+
+
+
+# [1.14.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.13.0...v1.14.0) (2026-01-13)
+
+
+### Features
+
+* **hooks:** Add project hook support for vulnerability events and branch filter strategy ([4f6d252](https://gitlab.com/gitlab-org/api/client-go/commit/4f6d252a47411602ac6757400e6b5479d807cdb8))
+
+## 1.13.0
+
+### 🚀 Features
+
+- feat(groups): add Active parameter to ListGroupProjects ([!2657](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2657)) by [Kai Armstrong](https://gitlab.com/phikai)
+
+### 🔄 Other Changes
+
+- chore(deps): update docker docker tag to v29.1.4 ([!2651](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2651)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+
+
+
+# [1.13.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.12.0...v1.13.0) (2026-01-12)
+
+
+### Features
+
+* **groups:** add Active parameter to ListGroupProjects ([dec511a](https://gitlab.com/gitlab-org/api/client-go/commit/dec511a199b0adb7ba87f5a02a50651049b68b71))
+
+## 1.12.0
+
+### 🚀 Features
+
+- feat: add EmojiEvents field support to Project Webhooks ([!2653](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2653)) by [Yugan](https://gitlab.com/yugannkt)
+
+### 🔄 Other Changes
+
+- chore(deps): update dependency golangci-lint to v2.8.0 ([!2650](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2650)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+- refactor(no-release): use errors.New instead of fmt.Errorf ([!2644](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2644)) by [Oleksandr Redko](https://gitlab.com/alexandear)
+
+
+
+# [1.12.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.11.0...v1.12.0) (2026-01-11)
+
+
+### Features
+
+* add EmojiEvents field support to Project Webhooks ([2bcfa1f](https://gitlab.com/gitlab-org/api/client-go/commit/2bcfa1fd77756a3ccdb2bcf685736ee839b745be))
+
+## 1.11.0
+
+### 🚀 Features
+
+- feat(groups): add support for merge related settings ([!2625](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2625)) by [Zubeen](https://gitlab.com/syedzubeen)
+
+### 🐛 Bug Fixes
+
+- fix(api): typo in ms teams slug ([!2643](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2643)) by [aishahsofea](https://gitlab.com/aishahsofea)
+
+### 🔄 Other Changes
+
+- chore(deps): update module golang.org/x/text to v0.32.0 ([!2642](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2642)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+- chore(deps): update module golang.org/x/sys to v0.39.0 ([!2641](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2641)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+- chore(deps): update module github.com/godbus/dbus/v5 to v5.2.2 ([!2637](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2637)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+- chore(deps): update module github.com/google/go-querystring to v1.2.0 ([!2638](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2638)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+
+
+
+# [1.11.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.10.0...v1.11.0) (2026-01-05)
+
+
+### Bug Fixes
+
+* **api:** typo in ms teams slug ([1ed6c95](https://gitlab.com/gitlab-org/api/client-go/commit/1ed6c9509b23db53c3988a2dde2f11d22c8be5f9))
+
+
+### Features
+
+* **groups:** add support for merge related settings ([cb8412f](https://gitlab.com/gitlab-org/api/client-go/commit/cb8412fc495d19ee6e44819a2f69fd213d19a199))
+
+## 1.10.0
+
+### 🚀 Features
+
+- feat: implement Runner Controller API ([!2634](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2634)) by [Duo Developer](https://gitlab.com/duo-developer)
+
+### 🔄 Other Changes
+
+- chore(deps): update module github.com/godbus/dbus/v5 to v5.2.1 ([!2635](https://gitlab.com/gitlab-org/api/client-go/-/merge_requests/2635)) by [GitLab Dependency Bot](https://gitlab.com/gitlab-dependency-update-bot)
+
+
+
+# [1.10.0](https://gitlab.com/gitlab-org/api/client-go/compare/v1.9.1...v1.10.0) (2025-12-19)
+
+
+### Features
+
+* implement Runner Controller API ([66f19f4](https://gitlab.com/gitlab-org/api/client-go/commit/66f19f4073ce87566c7751e0987f857eeb008849))
+
 ## 1.9.1
 
 ### 🐛 Bug Fixes
