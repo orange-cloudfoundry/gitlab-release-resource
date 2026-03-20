@@ -8,6 +8,14 @@ type Source struct {
 	Insecure     bool   `json:"insecure"`
 
 	TagFilter string `json:"tag_filter"`
+
+	DownloadAuths []DownloadAuth `json:"download_auths"`
+}
+
+type DownloadAuth struct {
+	Host     string `json:"host"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type CheckRequest struct {

@@ -47,6 +47,9 @@ Note that `check` will skip tags that do not have associated releases.
   If set, override default tag filter regular expression of `v?([^v].*)`.
   If the filter includes a capture group, the capture group is used as the release version;
   otherwise, the entire matching substring is used as the version.
+* `download_auths`: *Optional.*
+  A list of credentials to use for external asset hosts when running `in`.
+  Each entry must define `host`, `username`, and `password`.
 
 ### Examples
 
@@ -87,6 +90,23 @@ To set a custom tag filter:
     owner: concourse
     repository: concourse
     tag_filter: "version-(.*)"
+```
+
+To download release links from external hosts requiring basic authentication:
+
+```yaml
+- name: gl-release
+  type: gitlab-release
+  source:
+    repository: concourse
+    access_token: ((gitlab_access_token))
+    download_auths:
+    - host: artifacts.example.internal
+      username: ((artifacts_user))
+      password: ((artifacts_password))
+    - host: binaries.partner.example
+      username: ((partner_user))
+      password: ((partner_password))
 ```
 
 ## Behavior

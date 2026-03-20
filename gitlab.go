@@ -50,6 +50,8 @@ type GitlabClient struct {
 
 	accessToken string
 	repository  string
+	gitlabHost  string
+	downloadAuths map[string]DownloadAuth
 }
 
 func NewGitLabClient(source Source) (*GitlabClient, error) {
@@ -66,6 +68,12 @@ func NewGitLabClient(source Source) (*GitlabClient, error) {
 	httpClientOpt := gitlab.WithHTTPClient(httpClient)
 
 	baseURLOpt := gitlab.WithBaseURL(defaultBaseURL)
+	baseUrl, err := url.Parse(defaultBaseURL)
+	if err != nil {
+		return nil, err
+	}
+	gitlabHost := strings.ToLower(baseUrl.Hostname())
+
 	if source.GitLabAPIURL != "" {
 		var err error
 		baseUrl, err := url.Parse(source.GitLabAPIURL)
@@ -73,6 +81,7 @@ func NewGitLabClient(source Source) (*GitlabClient, error) {
 			return nil, err
 		}
 		baseURLOpt = gitlab.WithBaseURL(baseUrl.String())
+		gitlabHost = strings.ToLower(baseUrl.Hostname())
 	}
 
 	client, err := gitlab.NewClient(source.AccessToken, httpClientOpt, baseURLOpt)
@@ -80,10 +89,17 @@ func NewGitLabClient(source Source) (*GitlabClient, error) {
 		return nil, err
 	}
 
+	auths := make(map[string]DownloadAuth)
+	for _, auth := range source.DownloadAuths {
+		auths[strings.ToLower(auth.Host)] = auth
+	}
+
 	return &GitlabClient{
 		client:      client,
 		repository:  source.Repository,
 		accessToken: source.AccessToken,
+		downloadAuths: auths,
+		gitlabHost:    gitlabHost,
 	}, nil
 }
 
@@ -386,13 +402,25 @@ func (g *GitlabClient) DownloadProjectFile(fileURL, destPath string) error {
 	if err != nil {
 		return err
 	}
-
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", filePathRef.String(), nil)
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Private-Token", g.accessToken)
+	downloadHost := strings.ToLower(filePathRef.Hostname())
+
+	switch {
+	case downloadHost == g.gitlabHost:
+		// C'est une URL GitLab, utiliser le token
+		if g.accessToken != "" {
+			req.Header.Set("Private-Token", g.accessToken)
+		}
+	case g.downloadAuths[downloadHost].Host != "":
+		// Use Basic Auth
+		auth := g.downloadAuths[downloadHost]
+		req.SetBasicAuth(auth.Username, auth.Password)
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
