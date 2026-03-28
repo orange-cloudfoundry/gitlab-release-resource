@@ -9,11 +9,11 @@ require (
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.38.3
-	golang.org/x/net v0.48.0 // indirect
+	github.com/onsi/gomega v1.39.1
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.34.0
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 )
 
