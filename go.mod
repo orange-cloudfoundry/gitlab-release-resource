@@ -1,6 +1,6 @@
 module github.com/orange-cloudfoundry/gitlab-release-resource
 
-go 1.25.5
+go 1.26
 
 require (
 	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4
@@ -14,13 +14,13 @@ require (
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
-	golang.org/x/time v0.14.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 )
 
 require gitlab.com/gitlab-org/api/client-go v1.46.0
 
 require (
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
